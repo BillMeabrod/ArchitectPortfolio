@@ -6,7 +6,7 @@
         public string Callsign { get; set; }
         public string ShipName { get; set; }
         public string CaptainName { get; set; }
-        public DateTimeOffset LoggedAt { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset LoggedAt { get; set; } = DateTimeOffset.UtcNow;
         public string RawPayload { get; set; }
     }
 }

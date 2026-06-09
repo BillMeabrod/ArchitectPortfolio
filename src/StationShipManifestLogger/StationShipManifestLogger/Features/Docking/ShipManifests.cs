@@ -49,7 +49,7 @@ namespace StationShipManifestLogger.Features.Docking
                 CaptainName = request.CaptainName,
                 ShipName = request.ShipName,
                 RawPayload = JsonSerializer.Serialize(request),
-                LoggedAt = DateTime.UtcNow
+                LoggedAt = DateTimeOffset.UtcNow
             };
 
             _context.ManifestAuditLogs.Add(logEntry);
