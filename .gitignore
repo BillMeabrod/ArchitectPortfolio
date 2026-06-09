@@ -60,3 +60,4 @@ nunit-*.xml
 /src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db-shm
 /src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db-wal
 /src/StationShipManifestLogger/StationShipManifestLogger/StationShipManifestLogger.csproj.user
+*.user
