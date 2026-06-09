@@ -1,0 +1,36 @@
+@StationShipManifestLogger_HostAddress = http://localhost:5280
+
+POST http://localhost:5280/api/ShipManifests/submit-manifest
+Content-Type: application/json
+
+{
+  "shipName": "Vanguard",
+  "callsign": "VNG-789",
+  "captainName": "Sands Meabrod",
+  "cargoItems": [
+    "40 tons Plasma Ore",
+    "1 unit Tritium Fuel"
+  ],
+  "passengers": [
+    "John Doe",
+    "Jane Smith"
+  ]
+}
+###
+POST http://localhost:5280/api/ShipManifests/submit-manifest
+Content-Type: application/json
+
+{
+  "shipName": "",
+  "callsign": "VNG-789",
+  "captainName": "Sands Meabrod",
+  "cargoItems": [
+    "40 tons Plasma Ore",
+    "1 unit Tritium Fuel"
+  ],
+  "passengers": [
+    "John Doe",
+    "Jane Smith"
+  ]
+}
+###
