@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace StationShipManifestLogger.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialAzureCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,13 +15,13 @@ namespace StationShipManifestLogger.Migrations
                 name: "ManifestAuditLogs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Callsign = table.Column<string>(type: "TEXT", nullable: false),
-                    ShipName = table.Column<string>(type: "TEXT", nullable: false),
-                    CaptainName = table.Column<string>(type: "TEXT", nullable: false),
-                    LoggedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    RawPayload = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Callsign = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ShipName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CaptainName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LoggedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RawPayload = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
