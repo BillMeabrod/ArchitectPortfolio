@@ -55,3 +55,8 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+/src/StationShipManifestLogger/.vs
+/src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db
+/src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db-shm
+/src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db-wal
+/src/StationShipManifestLogger/StationShipManifestLogger/StationShipManifestLogger.csproj.user
