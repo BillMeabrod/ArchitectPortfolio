@@ -8,14 +8,9 @@ namespace StationShipManifestLogger.Features.Docking
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ShipManifestsController : ControllerBase
+    public class ShipManifestsController(IMediator mediatr) : ControllerBase
     {
-        private readonly IMediator _mediatr;
-
-        public ShipManifestsController(IMediator mediatr)
-        {
-            _mediatr = mediatr;
-        }
+        private readonly IMediator _mediatr = mediatr;
 
         [HttpPost]
         [Route("submit-manifest")]
@@ -37,19 +32,14 @@ namespace StationShipManifestLogger.Features.Docking
         [Required]
         public string CaptainName { get; set; } = string.Empty;
 
-        public List<string> CargoItems { get; set; } = new();
+        public List<string> CargoItems { get; set; } = [];
 
-        public List<string> Passengers { get; set; } = new();
+        public List<string> Passengers { get; set; } = [];
     }
 
-    public class SubmitManifestReportHandler : IRequestHandler<ManifestReportCommand, int>
+    public class SubmitManifestReportHandler(StationDbContext context) : IRequestHandler<ManifestReportCommand, int>
     {
-        StationDbContext _context;
-
-        public SubmitManifestReportHandler(StationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly StationDbContext _context = context;
 
         public async Task<int> Handle(ManifestReportCommand request, CancellationToken cancellationToken)
         {
