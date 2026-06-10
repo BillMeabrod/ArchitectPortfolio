@@ -1,17 +1,32 @@
-﻿using StationAI.Core.Interfaces;
+﻿using Azure.Storage.Blobs;
+using StationAI.Core.Interfaces;
 
 namespace StationAI.Adapters.Outbound
 {
     public class RulesBlobStorageAdapter : IRulesRepository
     {
-        public Task<string> GetRules()
+        private readonly BlobClient _blobClient;
+
+        public RulesBlobStorageAdapter(BlobServiceClient blobServiceClient)
         {
-            throw new NotImplementedException();
+            _blobClient = blobServiceClient
+                .GetBlobContainerClient("station-rules")
+                .GetBlobClient("current-rules.txt");
         }
 
-        public Task SaveRules(string rules)
+        public async Task<string?> GetRules()
         {
-            throw new NotImplementedException();
+            if (!await _blobClient.ExistsAsync())
+                return null;
+
+            var response = await _blobClient.DownloadContentAsync();
+            return response.Value.Content.ToString();
+        }
+
+        public async Task SaveRules(string rules)
+        {
+            await _blobClient.UploadAsync(
+                BinaryData.FromString(rules), overwrite: true);
         }
     }
 }

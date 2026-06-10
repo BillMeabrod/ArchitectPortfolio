@@ -1,3 +1,7 @@
+using Azure.Storage.Blobs;
+using StationAI.Adapters.Outbound;
+using StationAI.Core.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton(new BlobServiceClient(
+    builder.Configuration.GetConnectionString("BlobStorageConnection")));
+builder.Services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
+builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
 
 var app = builder.Build();
 

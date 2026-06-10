@@ -4,17 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>a0540e13-70c3-4419-a3f2-43ddd2d1f659</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.29.0" />
     <PackageReference Include="Google.GenAI" Version="1.9.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Adapters\Inbound\" />
-    <Folder Include="Core\Services\" />
   </ItemGroup>
 
 </Project>

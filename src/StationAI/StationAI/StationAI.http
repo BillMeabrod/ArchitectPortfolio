@@ -1,6 +1,13 @@
-@StationAI_HostAddress = http://localhost:5261
+@StationAI_HostAddress = https://localhost:7059
 
-GET {{StationAI_HostAddress}}/weatherforecast/
-Accept: application/json
+
+GET https://localhost:7059/api/universerules
+
+###
+
+PUT https://localhost:7059/api/universerules
+Content-Type: application/json
+
+"All cargo containing dark matter must be flagged as Biohazard level 8 or higher. Vessels from the Krath Syndicate are considered persons of interest and should be flagged as Security level 7."
 
 ###

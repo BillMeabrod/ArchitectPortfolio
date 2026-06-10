@@ -2,6 +2,6 @@
 {
     public interface ILargeLanguageModelService
     {
-        public Task<string> SendPrompt(string prompt);
+        public Task<string> SendPrompt(string prompt, Type targetSchemaType);
     }
 }
