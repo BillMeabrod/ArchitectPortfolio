@@ -63,3 +63,4 @@ nunit-*.xml
 *.user
 /src/StationAI/.vs/StationAI.slnx
 /src/StationAI/.vs/StationAI/CopilotIndices/18.7.1225.11805
+/src/StationAI/.vs/ProjectEvaluation
