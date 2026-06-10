@@ -61,3 +61,5 @@ nunit-*.xml
 /src/StationShipManifestLogger/StationShipManifestLogger/StationManifests.db-wal
 /src/StationShipManifestLogger/StationShipManifestLogger/StationShipManifestLogger.csproj.user
 *.user
+/src/StationAI/.vs/StationAI.slnx
+/src/StationAI/.vs/StationAI/CopilotIndices/18.7.1225.11805
