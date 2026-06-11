@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Azure.Storage.Queues;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using StationShipManifestLogger.Common.Data;
 using System.ComponentModel.DataAnnotations;
@@ -37,9 +38,10 @@ namespace StationShipManifestLogger.Features.Docking
         public List<string> Passengers { get; set; } = [];
     }
 
-    public class SubmitManifestReportHandler(StationDbContext context) : IRequestHandler<ManifestReportCommand, int>
+    public class SubmitManifestReportHandler(StationDbContext context, ShipManifestQueuePublisher queuePublisher) : IRequestHandler<ManifestReportCommand, int>
     {
         private readonly StationDbContext _context = context;
+        private readonly ShipManifestQueuePublisher _queuePublisher = queuePublisher;
 
         public async Task<int> Handle(ManifestReportCommand request, CancellationToken cancellationToken)
         {
@@ -54,7 +56,27 @@ namespace StationShipManifestLogger.Features.Docking
 
             _context.ManifestAuditLogs.Add(logEntry);
             await _context.SaveChangesAsync(cancellationToken);
+
+            await _queuePublisher.PublishAsync(request);
+
             return logEntry.Id;
+        }
+    }
+
+    public class ShipManifestQueuePublisher
+    {
+        private readonly QueueClient _queueClient;
+
+        public ShipManifestQueuePublisher(QueueServiceClient queueServiceClient)
+        {
+            _queueClient = queueServiceClient.GetQueueClient("ship-manifest-queue");
+        }
+
+        public async Task PublishAsync(object manifest)
+        {
+            await _queueClient.CreateIfNotExistsAsync();
+            var message = JsonSerializer.Serialize(manifest);
+            await _queueClient.SendMessageAsync(message);
         }
     }
 }
