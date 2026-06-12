@@ -2,18 +2,20 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
+using StationAI.Functions;
 using System.Text.Json;
 
 public class ShipManifestFunction
 {
     private readonly ILogger<ShipManifestFunction> _logger;
     private readonly RiskAssessmentService _riskAssessmentService;
+    private readonly RiskAssessmentQueuePublisher _queuePublisher;
 
-    public ShipManifestFunction(ILogger<ShipManifestFunction> logger, RiskAssessmentService riskAssessment)
+    public ShipManifestFunction(ILogger<ShipManifestFunction> logger, RiskAssessmentService riskAssessment, RiskAssessmentQueuePublisher queuePublisher)
     {
         _logger = logger;
         _riskAssessmentService = riskAssessment;
-
+        _queuePublisher = queuePublisher;
     }
 
     [Function("ShipManifestQueue")]
@@ -32,6 +34,8 @@ public class ShipManifestFunction
             }
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
+            await _queuePublisher.PublishAsync(assessment, manifest);
+
             _logger.LogInformation("Assessment complete for {Callsign}: Bio={Bio} Chem={Chem} Sec={Sec} Recommendation:\"{Recommendation}\"",
                 manifest.Callsign,
                 assessment.BiohazardLevel,
