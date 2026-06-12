@@ -5,16 +5,8 @@ using StationShipManifestLogger.Features.Docking;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<StationDbContext>(options =>
-        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-else
-{
-    builder.Services.AddDbContext<StationDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("AzureSqlConnection")));
-}
+builder.Services.AddDbContext<StationDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton(new QueueServiceClient(
     builder.Configuration.GetConnectionString("AzureStorageConnection")));
@@ -40,6 +32,12 @@ using (var scope = app.Services.CreateScope())
     }
     else
     {
+        var dbDir = "/home/data";
+        if (!Directory.Exists(dbDir))
+        {
+            Directory.CreateDirectory(dbDir);
+        }
+
         db.Database.Migrate();
     }
 }

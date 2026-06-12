@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using StationShipManifestLogger.Common.Data;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using System.Text.Json;
 
 namespace StationShipManifestLogger.Features.Docking
@@ -75,8 +76,9 @@ namespace StationShipManifestLogger.Features.Docking
         public async Task PublishAsync(object manifest)
         {
             await _queueClient.CreateIfNotExistsAsync();
-            var message = JsonSerializer.Serialize(manifest);
-            await _queueClient.SendMessageAsync(message);
+            var json = JsonSerializer.Serialize(manifest);
+            var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+            await _queueClient.SendMessageAsync(base64);
         }
     }
 }
