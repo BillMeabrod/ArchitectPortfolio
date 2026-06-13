@@ -26,7 +26,7 @@ namespace StationAI.Adapters.Inbound
         public async Task<IActionResult> SaveRules([FromBody] string rules)
         {
             await _rulesRepository.SaveRules(rules);
-            return NoContent();
+            return Ok();
         }
     }
 }

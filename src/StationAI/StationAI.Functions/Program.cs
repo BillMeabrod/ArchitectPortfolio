@@ -19,7 +19,7 @@ var host = new HostBuilder()
         services.AddSingleton(new QueueServiceClient(
             Environment.GetEnvironmentVariable("AzureWebJobsStorage1")));
         services.AddScoped<RiskAssessmentQueuePublisher>();
-    })
+    })    
     .Build();
 
 await host.RunAsync();

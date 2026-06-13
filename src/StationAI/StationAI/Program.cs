@@ -14,6 +14,7 @@ builder.Services.AddSingleton(new BlobServiceClient(
     builder.Configuration.GetConnectionString("BlobStorageConnection")));
 builder.Services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -28,5 +29,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.UseHealthChecks("/health");
 app.Run();
