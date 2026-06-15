@@ -10,8 +10,8 @@ namespace StationAI.Adapters.Outbound
     public class GeminiAdapter : ILargeLanguageModelService
     {
         private readonly Client _client = new();
-        private readonly string _modelName = "gemini-3.5-flash";
-        private readonly string _backupModelName = "gemini-2.5-flash";
+        private readonly string _modelName = "gemini-3.1-flash-lite";
+        private readonly string _backupModelName = "gemini-2.5-flash-lite";
 
         public async Task<string> SendPrompt(string prompt, System.Type targetSchemaType)
         {

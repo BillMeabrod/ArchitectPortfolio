@@ -20,7 +20,7 @@ public class ShipManifestFunction
 
     [Function("ShipManifestQueue")]
     public async Task Run(
-        [QueueTrigger("ship-manifest-queue", Connection = "AzureWebJobsStorage1")] string message)
+        [QueueTrigger("ship-manifest-queue", Connection = "BlobStorageConnection")] string message)
     {
         try
         {
@@ -45,7 +45,7 @@ public class ShipManifestFunction
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing manifest message");
+            _logger.LogError(ex, $"Error processing manifest message. Message: {ex.Message}, Inner Exception: {ex.InnerException}");
             throw;
         }
     }
