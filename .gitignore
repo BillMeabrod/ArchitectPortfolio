@@ -65,3 +65,9 @@ nunit-*.xml
 /src/StationAI/.vs/StationAI/CopilotIndices/18.7.1225.11805
 /src/StationAI/.vs/ProjectEvaluation
 /src/StationShipManifestLogger/StationShipManifestLogger/appsettings.Development.json
+/src/StationTriage/station_triage/db.sqlite3
+/src/StationTriage/station_triage/functions/__pycache__
+/src/StationTriage/station_triage/station_triage/__pycache__
+/src/StationTriage/station_triage/triage/migrations/__pycache__
+/src/StationTriage/station_triage/triage/__pycache__
+/src/StationTriage/station_triage/functions/local.settings.json
