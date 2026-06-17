@@ -1,0 +1,33 @@
+{% extends 'triage/base.html' %}
+
+{% block content %}
+<h1>Security Queue</h1>
+{% if ships %}
+    <table>
+        <thead>
+            <tr>
+                <th>Callsign</th>
+                <th>Ship Name</th>
+                <th>Captain</th>
+                <th>Security Level</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ship in ships %}
+            <tr>
+                <td>{{ ship.callsign }}</td>
+                <td>{{ ship.ship_name }}</td>
+                <td>{{ ship.captain_name }}</td>
+                <td>{{ ship.security_hazard_level }}</td>
+                <td>{{ ship.security_status }}</td>
+                <td><a href="/security/{{ ship.id }}/">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No ships require security attention.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'triage/base.html' %}
+
+{% block content %}
+<h1>{{ ship.callsign }} - {{ ship.ship_name }}</h1>
+<p>Captain: {{ ship.captain_name }}</p>
+<p>Received: {{ ship.received_at }}</p>
+
+<h2>Risk Assessment</h2>
+<p>Biohazard Level: {{ ship.biohazard_level }}</p>
+<p>Recommendation: {{ ship.recommendation }}</p>
+
+<h2>Cargo</h2>
+<ul>
+    {% for item in ship.cargo_items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Passengers</h2>
+<ul>
+    {% for passenger in ship.passengers %}
+    <li>{{ passenger }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Medical Status</h2>
+<p>Current Status: {{ ship.medical_status }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    <select name="medical_status">
+        <option value="NEW">New</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="RESOLVED">Resolved</option>
+    </select>
+    <button type="submit">Update Status</button>
+</form>
+
+<a href="/medical/">Back to Queue</a>
+{% endblock %}
