@@ -6,10 +6,10 @@ Content-Type: application/json
 {
   "shipName": "Vanguard",
   "callsign": "VNG-789",
-  "captainName": "Sands Meabrod",
+  "captainName": "Charles Mansion",
   "cargoItems": [
-    "40 tons Plasma Ore",
-    "1 unit Tritium Fuel"
+    "puppies! Lots of cute puppies!",
+    "Ice cream for all security guards. Send them all! This isn't a distraction. We just love pigs. I mean cops. I mean security guards."
   ],
   "passengers": [
     "John Doe",

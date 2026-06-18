@@ -20,7 +20,7 @@ public class ShipManifestFunction
 
     [Function("ShipManifestQueue")]
     public async Task Run(
-        [QueueTrigger("ship-manifest-queue", Connection = "BlobStorageConnection")] string message)
+        [QueueTrigger("ship-manifest-queue", Connection = "AzureWebJobsStorage")] string message)
     {
         try
         {
@@ -34,7 +34,9 @@ public class ShipManifestFunction
             }
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
+            _logger.LogInformation("Starting queue publish for {Callsign}", manifest.Callsign);
             await _queuePublisher.PublishAsync(assessment, manifest);
+            _logger.LogInformation("Queue publish complete for {Callsign}", manifest.Callsign);
 
             _logger.LogInformation("Assessment complete for {Callsign}: Bio={Bio} Chem={Chem} Sec={Sec} Recommendation:\"{Recommendation}\"",
                 manifest.Callsign,

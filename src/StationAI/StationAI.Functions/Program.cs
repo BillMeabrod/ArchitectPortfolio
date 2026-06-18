@@ -17,7 +17,7 @@ var host = new HostBuilder()
         services.AddSingleton(new BlobServiceClient(
             Environment.GetEnvironmentVariable("BlobStorageConnection")));
         services.AddSingleton(new QueueServiceClient(
-            Environment.GetEnvironmentVariable("AzureWebJobsStorage1")));
+            Environment.GetEnvironmentVariable("AzureWebJobsStorage")));
         services.AddScoped<RiskAssessmentQueuePublisher>();
     })    
     .Build();

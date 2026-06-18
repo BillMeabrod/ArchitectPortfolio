@@ -1,9 +1,12 @@
 param location string = resourceGroup().location
 param appName string = 'ship-manifest-logger'
 
+@secure()
+param azureStorageConnection string
+
 // 1. Azure App Service Plan (The underlying server hardware)
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: '${appName}-plan'
+  name: 'spacestation-api-plan'
   location: location
   sku: {
     name: 'F1' // Free Tier
@@ -27,6 +30,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'ConnectionStrings__DefaultConnection'
           value: 'Data Source=/home/data/StationManifests.db'
+        }
+        {
+          name: 'ConnectionStrings__AzureStorageConnection'
+          value: azureStorageConnection
         }
       ]
     }
