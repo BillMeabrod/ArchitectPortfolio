@@ -102,13 +102,13 @@ jobs:
           template: infra/station-triage.bicep
           parameters: databaseUrl=${{ secrets.NEON_DATABASE_URL }} djangoSecretKey=${{ secrets.DJANGO_SECRET_KEY }}
 
-      - name: Install dependencies
+      - name: Create deployment package
         run: |
           cd src/StationTriage
-          pip install -r requirements.txt
+          zip -r ../../station-triage.zip . -x "venv/*" -x "*.pyc" -x "__pycache__/*" -x ".env" -x "db.sqlite3" -x "functions/*"
 
       - name: Deploy
         uses: azure/webapps-deploy@v3
         with:
           app-name: station-triage-web
-          package: src/StationTriage
+          package: station-triage.zip
