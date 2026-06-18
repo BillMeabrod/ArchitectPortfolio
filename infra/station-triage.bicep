@@ -20,6 +20,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'PYTHON|3.14'
+      appCommandLine: 'python manage.py collectstatic --noinput && gunicorn station_triage.wsgi'
       appSettings: [
         {
           name: 'DATABASE_URL'
@@ -35,6 +36,10 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'ORYX_DISABLE_COMPRESS_OUTPUT'
           value: 'true'
         }
       ]
