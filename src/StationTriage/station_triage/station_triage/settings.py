@@ -23,7 +23,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-ALLOWED_HOSTS = ['station-triage-web.azurewebsites.net']
+ALLOWED_HOSTS = ['station-triage-web.azurewebsites.net', '169.254.131.1']
 
 
 # Application definition
