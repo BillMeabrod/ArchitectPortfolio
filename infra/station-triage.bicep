@@ -80,10 +80,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: '~4'
         }
         {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'python'
-        }
-        {
           name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
           value: azureStorageConnection
         }
