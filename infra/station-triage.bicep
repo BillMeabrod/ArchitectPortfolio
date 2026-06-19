@@ -66,7 +66,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: functionsPlan.id
     siteConfig: {
-      linuxFxVersion: 'Python|3.13'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
@@ -94,7 +93,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       deployment: {
         storage: {
           type: 'blobContainer'
-          value: 'https://spacestationstorage.blob.core.windows.net/app-package-station-triage-functions'
+          value: 'https://spacestationstorage.blob.${environment().suffixes.storage}/app-package-station-triage-functions'
           authentication: {
             type: 'StorageAccountConnectionString'
             storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
