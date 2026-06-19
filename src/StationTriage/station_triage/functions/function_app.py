@@ -5,7 +5,7 @@ import sys
 
 import django
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.dirname(__file__))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'station_triage.settings')
 django.setup()
 

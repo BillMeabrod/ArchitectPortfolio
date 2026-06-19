@@ -119,10 +119,16 @@ jobs:
             --name app-package-station-triage-functions \
             --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION }}"
 
-      - name: Create functions deployment package
+      - name: Stage functions deployment package
         run: |
-          cd src/StationTriage/station_triage/functions
-          zip -r $GITHUB_WORKSPACE/station-triage-functions.zip . -x "*.pyc" -x "__pycache__/*" -x ".env"
+          mkdir -p staging/functions-deploy
+          cp -r src/StationTriage/station_triage/triage staging/functions-deploy/
+          cp -r src/StationTriage/station_triage/station_triage staging/functions-deploy/
+          cp src/StationTriage/station_triage/functions/function_app.py staging/functions-deploy/
+          cp src/StationTriage/station_triage/functions/host.json staging/functions-deploy/
+          cp src/StationTriage/station_triage/functions/requirements.txt staging/functions-deploy/
+          cd staging/functions-deploy
+          zip -r $GITHUB_WORKSPACE/station-triage-functions.zip . -x "*.pyc" -x "__pycache__/*"
 
       - name: Deploy Functions
         uses: Azure/functions-action@v1
