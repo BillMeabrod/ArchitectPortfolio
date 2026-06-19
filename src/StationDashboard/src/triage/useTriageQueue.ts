@@ -42,7 +42,7 @@ export function useTriageQueue(queue: Queue): UseTriageQueue {
     slowTimer.current = setTimeout(() => setSlow(true), 5000)
 
     try {
-      const res = await fetch(`${BASE}/triage/${queue}/`)
+      const res = await fetch(`${BASE}/${queue}/`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       const json: TriageItem[] = await res.json()
       setItems(json)
@@ -66,7 +66,7 @@ export function useTriageQueue(queue: Queue): UseTriageQueue {
   const updateStatus = useCallback(
     async (id: number, status: Status) => {
       try {
-        const res = await fetch(`${BASE}/triage/${queue}/${id}/`, {
+        const res = await fetch(`${BASE}/${queue}/${id}/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [statusField[queue]]: status }),
