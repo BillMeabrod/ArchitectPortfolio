@@ -1,8 +1,18 @@
-# React + TypeScript + Vite
+# StationDashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React + TypeScript frontend for the Station suite, with three zones: Ship Manifest Logger, ARIA AI Console, and Station Triage.
 
-Currently, two official plugins are available:
+## Setup
+
+Copy `.env.example` to `.env` and fill in the API base URLs before running the app:
+
+```sh
+cp .env.example .env
+```
+
+The `.env` file is gitignored. The example values point at the deployed Azure instances; replace them with `http://localhost:<port>` entries when running backends locally.
+
+## Development
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
