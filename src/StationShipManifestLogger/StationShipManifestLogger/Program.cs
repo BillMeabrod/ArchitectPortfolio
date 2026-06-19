@@ -15,12 +15,51 @@ builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHealthChecks();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DashboardPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "https://station-dashboard.azurewebsites.net" // placeholder — update once the dashboard's real deployed URL is known
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
+
+app.UseCors("DashboardPolicy");
+
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<StationDbContext>();
+    if (app.Environment.IsDevelopment())
+    {
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        var dbDir = "/home/data";
+        if (!Directory.Exists(dbDir))
+        {
+            Directory.CreateDirectory(dbDir);
+        }
+
+        db.Database.Migrate();
+    }
+}
+
+app.Run();
 
 using (var scope = app.Services.CreateScope())
 {

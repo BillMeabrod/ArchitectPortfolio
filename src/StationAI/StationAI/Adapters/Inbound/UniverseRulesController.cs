@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using StationAI.Core;
 using StationAI.Core.Interfaces;
 
 namespace StationAI.Adapters.Inbound
@@ -18,8 +19,12 @@ namespace StationAI.Adapters.Inbound
         [HttpGet]
         public async Task<IActionResult> GetRules()
         {
-            var rules = await _rulesRepository.GetRules();
-            return Ok(rules ?? "No current intel on the state of the universe is available.");
+            var universeIntel = await _rulesRepository.GetRules();
+            return Ok(new
+            {
+                coreDirective = AriaIdentity.CoreDirective,
+                universeIntel = universeIntel ?? "No current intel on the state of the universe is available."
+            });
         }
 
         [HttpPut]
