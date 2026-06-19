@@ -20,7 +20,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'PYTHON|3.14'
-      appCommandLine: 'python manage.py migrate --noinput && python manage.py createsuperuser --noinput || true && python manage.py collectstatic --noinput && gunicorn station_triage.wsgi'
+      appCommandLine: 'python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn station_triage.wsgi'
       appSettings: [
         {
           name: 'DATABASE_URL'
