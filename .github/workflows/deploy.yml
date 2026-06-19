@@ -113,6 +113,12 @@ jobs:
           app-name: station-triage-web
           package: station-triage.zip
 
+      - name: Create functions storage container
+        run: |
+          az storage container create \
+            --name app-package-station-triage-functions \
+            --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION }}"
+
       - name: Create functions deployment package
         run: |
           cd src/StationTriage/station_triage/functions
