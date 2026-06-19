@@ -60,25 +60,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<StationDbContext>();
-    if (app.Environment.IsDevelopment())
-    {
-        db.Database.EnsureDeleted();
-        db.Database.EnsureCreated();
-    }
-    else
-    {
-        var dbDir = "/home/data";
-        if (!Directory.Exists(dbDir))
-        {
-            Directory.CreateDirectory(dbDir);
-        }
-
-        db.Database.Migrate();
-    }
-}
-
-app.Run();
