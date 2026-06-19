@@ -1,6 +1,7 @@
 param location string = 'centralus'
 param appName string = 'station-triage'
 param existingPlanName string = 'spacestation-api-plan'
+param existingFunctionsPlanName string = 'ASP-SpaceStationRG-9849'
 
 @secure()
 param databaseUrl string
@@ -8,8 +9,15 @@ param databaseUrl string
 @secure()
 param djangoSecretKey string
 
+@secure()
+param azureStorageConnection string
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
   name: existingPlanName
+}
+
+resource functionsPlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
+  name: existingFunctionsPlanName
 }
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
@@ -42,7 +50,65 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'ORYX_DISABLE_COMPRESS_OUTPUT'
           value: 'true'
         }
+        {
+          name: 'CSRF_TRUSTED_ORIGINS'
+          value: 'https://${appName}-web.azurewebsites.net'
+        }
       ]
+    }
+  }
+}
+
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: '${appName}-functions'
+  location: location
+  kind: 'functionapp,linux'
+  properties: {
+    serverFarmId: functionsPlan.id
+    siteConfig: {
+      linuxFxVersion: 'Python|3.13'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: azureStorageConnection
+        }
+        {
+          name: 'DATABASE_URL'
+          value: databaseUrl
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'python'
+        }
+        {
+          name: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+          value: azureStorageConnection
+        }
+      ]
+    }
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: 'https://spacestationstorage.blob.core.windows.net/app-package-station-triage-functions'
+          authentication: {
+            type: 'StorageAccountConnectionString'
+            storageAccountConnectionStringName: 'DEPLOYMENT_STORAGE_CONNECTION_STRING'
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 100
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: 'python'
+        version: '3.13'
+      }
     }
   }
 }
