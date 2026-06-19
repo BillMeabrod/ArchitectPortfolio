@@ -1,7 +1,6 @@
 param location string = 'centralus'
 param appName string = 'station-triage'
 param existingPlanName string = 'spacestation-api-plan'
-param existingFunctionsPlanName string = 'ASP-SpaceStationRG-9849'
 
 @secure()
 param databaseUrl string
@@ -16,8 +15,17 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
   name: existingPlanName
 }
 
-resource functionsPlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
-  name: existingFunctionsPlanName
+resource triageFunctionsPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: 'ASP-StationTriage-Functions'
+  location: location
+  sku: {
+    name: 'FC1'
+    tier: 'FlexConsumption'
+  }
+  kind: 'functionapp'
+  properties: {
+    reserved: true
+  }
 }
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
@@ -64,7 +72,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   location: location
   kind: 'functionapp,linux'
   properties: {
-    serverFarmId: functionsPlan.id
+    serverFarmId: triageFunctionsPlan.id
     siteConfig: {
       appSettings: [
         {
