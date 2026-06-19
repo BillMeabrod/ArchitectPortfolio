@@ -135,3 +135,4 @@ jobs:
         with:
           app-name: station-triage-functions
           package: station-triage-functions.zip
+          remote-build: true
