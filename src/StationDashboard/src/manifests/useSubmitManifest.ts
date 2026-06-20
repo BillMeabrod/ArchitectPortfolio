@@ -28,6 +28,7 @@ export function useSubmitManifest(): UseSubmitManifest {
     setSlow(false)
     setResult(null)
 
+    if (slowTimer.current) clearTimeout(slowTimer.current)
     slowTimer.current = setTimeout(() => setSlow(true), 5000)
 
     try {
