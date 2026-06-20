@@ -34,6 +34,7 @@ export function useUniverseRules(): UseUniverseRules {
     setFetchError(null)
     setSlow(false)
 
+    if (slowTimer.current) clearTimeout(slowTimer.current)
     slowTimer.current = setTimeout(() => setSlow(true), 5000)
 
     try {
