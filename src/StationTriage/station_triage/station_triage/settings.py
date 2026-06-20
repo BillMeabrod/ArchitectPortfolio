@@ -28,7 +28,7 @@ CSRF_TRUSTED_ORIGINS = ['https://station-triage-web.azurewebsites.net']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://station-dashboard.azurewebsites.net",  # placeholder — update once the dashboard's real deployed URL is known
+    "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net",
 ]
 
 

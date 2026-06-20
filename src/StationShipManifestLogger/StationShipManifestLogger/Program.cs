@@ -21,11 +21,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("DashboardPolicy", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5173",
-                "https://station-dashboard.azurewebsites.net" // placeholder — update once the dashboard's real deployed URL is known
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        "http://localhost:5173",
+        "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net"
+        )
+        .AllowAnyMethod()
+        .AllowAnyHeader();
     });
 });
 
