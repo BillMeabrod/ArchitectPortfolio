@@ -15,9 +15,26 @@ builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHealthChecks();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DashboardPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "https://station-dashboard.azurewebsites.net" // placeholder — update once the dashboard's real deployed URL is known
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();
+
+app.UseCors("DashboardPolicy");
+
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");

@@ -26,6 +26,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ALLOWED_HOSTS = ['station-triage-web.azurewebsites.net', '169.254.131.1']
 CSRF_TRUSTED_ORIGINS = ['https://station-triage-web.azurewebsites.net']
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://station-dashboard.azurewebsites.net",  # placeholder — update once the dashboard's real deployed URL is known
+]
+
 
 # Application definition
 
@@ -36,12 +41,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'triage',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
