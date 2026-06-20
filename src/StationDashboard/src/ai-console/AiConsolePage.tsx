@@ -18,17 +18,21 @@ export default function AiConsolePage() {
     await save(intel)
   }
 
-  const sectionHeadClass = 'text-xs font-mono font-semibold tracking-widest uppercase text-cyan-400/70 mb-2'
-  const blockClass = 'rounded border border-indigo-800 bg-indigo-950/60 p-4'
+  const sectionHeadClass = 'text-xs font-mono font-semibold tracking-widest text-[#5dcaa5] mb-2'
+  const blockClass = 'rounded border border-[#1d9e75] bg-[#04342c] p-4'
 
   return (
-    <Layout zoneName="ARIA AI Console" headerClass="bg-indigo-950 text-indigo-100 border-b border-indigo-800">
+    <Layout
+      zoneName="ARIA AI Console"
+      headerClass="bg-black text-[#5dcaa5] border-b border-[#1d9e75]"
+      pageClass="bg-black"
+    >
       <div className="max-w-3xl">
         <div className="mb-6">
-          <h1 className="text-xl font-mono font-bold text-cyan-400 tracking-wide uppercase">
-            Operational Rule Configuration
+          <h1 className="text-xl font-mono font-bold text-[#5dcaa5] tracking-wide">
+            &gt; ARIA OPERATIONAL RULE CONFIGURATION
           </h1>
-          <p className="text-indigo-300 text-sm mt-1 font-mono">
+          <p className="text-[#9fe1cb]/50 text-sm mt-1 font-mono">
             Inspect ARIA&apos;s core directive and configure volatile universe intel.
           </p>
         </div>
@@ -36,15 +40,15 @@ export default function AiConsolePage() {
         {loading && (
           <div className="space-y-4">
             <div className={blockClass}>
-              <p className="text-indigo-400 text-sm font-mono animate-pulse">
-                Connecting to ARIA…
+              <p className="text-[#5dcaa5] text-sm font-mono animate-pulse">
+                &gt; Connecting to ARIA…
               </p>
             </div>
             <ColdStartNotice
               slow={slow}
               error={null}
               onRetry={reload}
-              accentClass="border-cyan-700 text-cyan-400"
+              accentClass="border-[#1d9e75] text-[#5dcaa5]"
             />
           </div>
         )}
@@ -54,33 +58,35 @@ export default function AiConsolePage() {
             slow={false}
             error={fetchError}
             onRetry={reload}
-            accentClass="border-cyan-700 text-cyan-400"
+            accentClass="border-[#1d9e75] text-[#5dcaa5]"
           />
         )}
 
         {!loading && data && (
           <div className="space-y-6">
             <div>
-              <p className={sectionHeadClass}>Core Directive — Read Only</p>
+              <p className={sectionHeadClass}>&gt; CORE DIRECTIVE [READ ONLY]</p>
               <div className={`${blockClass} relative`}>
-                <span className="absolute top-2 right-3 text-xs font-mono text-indigo-500 uppercase tracking-widest">
+                <span className="absolute top-2 right-3 text-xs font-mono text-[#1d9e75] uppercase tracking-widest">
                   Immutable
                 </span>
-                <pre className="text-indigo-200 text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                <pre className="text-[#9fe1cb] text-xs leading-relaxed whitespace-pre-wrap font-mono">
                   {data.coreDirective}
                 </pre>
               </div>
             </div>
 
             <form onSubmit={handleSave}>
-              <p className={sectionHeadClass}>Universe Intel — Editable</p>
+              <p className={sectionHeadClass}>
+                &gt; UNIVERSE INTEL [EDITABLE]<span className="cursor-blink">█</span>
+              </p>
               <div className={blockClass}>
-                <p className="text-xs text-indigo-400 font-mono mb-3">
+                <p className="text-xs text-[#9fe1cb]/60 font-mono mb-3">
                   Active tactical sector updates fed into every risk assessment. Modifications take
                   effect on the next assessment cycle.
                 </p>
                 <textarea
-                  className="w-full bg-indigo-900/50 border border-indigo-700 rounded px-3 py-2 text-indigo-100 placeholder-indigo-500 focus:outline-none focus:border-cyan-500 font-mono text-sm resize-y min-h-36"
+                  className="w-full bg-black border border-[#1d9e75]/60 rounded-[2px] px-3 py-2 text-[#5dcaa5] placeholder-[#1d9e75]/40 focus:outline-none focus:border-[#1d9e75] font-mono text-sm resize-y min-h-36"
                   value={intel}
                   onChange={e => setIntel(e.target.value)}
                   placeholder="Enter sector intel…"
@@ -91,12 +97,12 @@ export default function AiConsolePage() {
                 <button
                   type="submit"
                   disabled={saveLoading}
-                  className="px-5 py-2 bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed rounded font-mono font-bold text-white text-sm tracking-wide transition-colors"
+                  className="px-5 py-2 bg-transparent border border-[#1d9e75] hover:bg-[#1d9e75]/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-[2px] font-mono font-bold text-[#5dcaa5] text-sm tracking-widest transition-colors"
                 >
-                  {saveLoading ? 'Transmitting…' : 'Save Intel'}
+                  {saveLoading ? '[ TRANSMITTING… ]' : '[ SAVE_INTEL ]'}
                 </button>
                 {saveSuccess && (
-                  <span className="text-sm font-mono text-cyan-400">✓ Intel updated</span>
+                  <span className="text-sm font-mono text-[#5dcaa5]">✓ Intel updated</span>
                 )}
                 {saveError && (
                   <span className="text-sm font-mono text-red-400">{saveError}</span>

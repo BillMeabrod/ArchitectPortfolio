@@ -10,13 +10,14 @@ interface LayoutProps {
   children: React.ReactNode
   zoneName: string
   headerClass: string
+  pageClass?: string
 }
 
-export default function Layout({ children, zoneName, headerClass }: LayoutProps) {
+export default function Layout({ children, zoneName, headerClass, pageClass = '' }: LayoutProps) {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${pageClass}`}>
       <header className={`px-6 py-3 flex items-center gap-6 ${headerClass}`}>
         <Link to="/" className="text-sm opacity-60 hover:opacity-100 transition-opacity mr-2">
           ← Home

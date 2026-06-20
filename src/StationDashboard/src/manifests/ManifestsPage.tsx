@@ -43,39 +43,43 @@ export default function ManifestsPage() {
   }
 
   const fieldClass =
-    'w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono text-sm'
-  const labelClass = 'block text-xs font-mono text-amber-400/80 uppercase tracking-widest mb-1'
+    'w-full bg-[#26221b] border border-[#ef9f27]/40 rounded-[4px] px-3 py-2 text-[#f1efe8] placeholder-[#5a4a2a] focus:outline-none focus:border-[#ef9f27] font-mono text-sm'
+  const labelClass = 'block text-xs font-mono text-[#ba7517] uppercase tracking-widest mb-1'
 
   return (
-    <Layout zoneName="Ship Manifest Logger" headerClass="bg-slate-900 text-slate-100 border-b border-slate-700">
+    <Layout
+      zoneName="Ship Manifest Logger"
+      headerClass="bg-[#1c1a16] text-[#f1efe8] border-b border-[#ef9f27]"
+      pageClass="bg-[#1c1a16]"
+    >
       <div className="max-w-2xl">
         <div className="mb-6">
-          <h1 className="text-xl font-mono font-bold text-amber-400 tracking-wide uppercase">
+          <h1 className="text-xl font-mono font-bold text-[#fac775] tracking-wide uppercase">
             Docking Manifest Entry
           </h1>
-          <p className="text-slate-400 text-sm mt-1 font-mono">
+          <p className="text-[#f1efe8]/50 text-sm mt-1 font-mono">
             Submit vessel details for audit and queue processing.
           </p>
         </div>
 
         {result ? (
-          <div className="rounded border border-amber-700 bg-slate-900 p-6">
+          <div className="rounded-[4px] border border-[#ef9f27] bg-[#26221b] p-6">
             <div className="flex items-start gap-3 mb-4">
-              <span className="text-amber-400 text-2xl">✓</span>
+              <span className="text-[#fac775] text-2xl font-mono">✓</span>
               <div>
-                <p className="text-amber-400 font-mono font-bold text-lg">Manifest Logged</p>
-                <p className="text-slate-300 text-sm mt-1">
+                <p className="text-[#fac775] font-mono font-bold text-lg uppercase tracking-wide">Manifest Logged</p>
+                <p className="text-[#f1efe8] text-sm mt-1">
                   Audit ID:{' '}
-                  <span className="font-mono font-bold text-amber-300">#{result.auditId}</span>
+                  <span className="font-mono font-bold text-[#ef9f27]">#{result.auditId}</span>
                 </p>
-                <p className="text-slate-500 text-xs mt-1">
+                <p className="text-[#f1efe8]/40 text-xs mt-1 font-mono">
                   Vessel queued for ARIA risk assessment.
                 </p>
               </div>
             </div>
             <button
               onClick={reset}
-              className="px-4 py-2 bg-slate-800 border border-slate-600 hover:border-amber-500 rounded text-sm font-mono text-slate-300 transition-colors"
+              className="px-4 py-2 bg-transparent border border-[#ef9f27]/50 hover:border-[#ef9f27] rounded-[4px] text-sm font-mono text-[#fac775] uppercase tracking-widest transition-colors"
             >
               Submit Another Manifest
             </button>
@@ -131,7 +135,7 @@ export default function ManifestsPage() {
                       <button
                         type="button"
                         onClick={() => removeItem(cargoItems, setCargoItems, i)}
-                        className="px-2 text-slate-500 hover:text-red-400 transition-colors"
+                        className="px-2 text-[#ba7517]/60 hover:text-red-400 transition-colors font-mono"
                         aria-label="Remove cargo item"
                       >
                         ✕
@@ -142,7 +146,7 @@ export default function ManifestsPage() {
                 <button
                   type="button"
                   onClick={() => addItem(cargoItems, setCargoItems)}
-                  className="text-xs font-mono text-amber-500/70 hover:text-amber-400 transition-colors"
+                  className="text-xs font-mono text-[#ba7517] hover:text-[#fac775] uppercase tracking-widest transition-colors"
                 >
                   + Add cargo item
                 </button>
@@ -164,7 +168,7 @@ export default function ManifestsPage() {
                       <button
                         type="button"
                         onClick={() => removeItem(passengers, setPassengers, i)}
-                        className="px-2 text-slate-500 hover:text-red-400 transition-colors"
+                        className="px-2 text-[#ba7517]/60 hover:text-red-400 transition-colors font-mono"
                         aria-label="Remove passenger"
                       >
                         ✕
@@ -175,7 +179,7 @@ export default function ManifestsPage() {
                 <button
                   type="button"
                   onClick={() => addItem(passengers, setPassengers)}
-                  className="text-xs font-mono text-amber-500/70 hover:text-amber-400 transition-colors"
+                  className="text-xs font-mono text-[#ba7517] hover:text-[#fac775] uppercase tracking-widest transition-colors"
                 >
                   + Add passenger
                 </button>
@@ -187,12 +191,12 @@ export default function ManifestsPage() {
                 slow={slow}
                 error={error}
                 onRetry={() => {}}
-                accentClass="border-amber-600 text-amber-400"
+                accentClass="border-[#ef9f27] text-[#fac775]"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-3 px-6 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded font-mono font-bold text-slate-950 text-sm tracking-wide transition-colors"
+                className="mt-3 px-6 py-2 bg-transparent border border-[#ef9f27] hover:bg-[#ef9f27]/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-[4px] font-mono font-bold text-[#fac775] text-sm tracking-widest uppercase transition-colors"
               >
                 {loading ? 'Transmitting…' : 'Submit Manifest'}
               </button>
