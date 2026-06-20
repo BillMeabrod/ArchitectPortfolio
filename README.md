@@ -6,6 +6,16 @@ Each backend application is deliberately built using a different architectural p
 
 ---
 
+## Live
+
+The dashboard is deployed and publicly reachable: **https://agreeable-moss-0ff2e0510.7.azurestaticapps.net**
+
+Every backend runs on free or low-cost Azure tiers, which means a real cold start on the first request after idle. The dashboard surfaces this explicitly rather than hiding it behind a generic spinner. If a request takes more than a few seconds, you will see a message explaining that the backend may be waking up. This is not a bug, it is a deliberate tradeoff documented further in the App 4 section below.
+
+This infrastructure is sized for portfolio review, not sustained traffic. If the demo is unresponsive, the most likely cause is a free-tier quota being exhausted rather than the app being broken.
+
+---
+
 ## The Big Picture
 
 ```
