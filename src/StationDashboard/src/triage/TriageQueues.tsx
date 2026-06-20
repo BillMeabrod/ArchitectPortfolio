@@ -1,10 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import ColdStartNotice from '../shared/ColdStartNotice'
 import StatusBadge from './StatusBadge'
 import { useTriageQueue, type TriageItem } from './useTriageQueue'
 
 type Status = 'NEW' | 'IN_PROGRESS' | 'RESOLVED'
-
-const STATUSES: Status[] = ['NEW', 'IN_PROGRESS', 'RESOLVED']
 
 interface SecurityQueueProps {
   onError?: (msg: string) => void
@@ -21,19 +20,24 @@ function QueueCard({
   hazardLabel,
   hazardLevel,
   statusKey,
-  onUpdate,
+  queue,
 }: {
   item: TriageItem
   hazardLabel: string
   hazardLevel: number
   statusKey: keyof TriageItem
-  onUpdate: (id: number, status: Status) => void
+  queue: string
 }) {
+  const navigate = useNavigate()
   const currentStatus = (item[statusKey] as Status) ?? 'NEW'
 
   return (
     <div
-      className="bg-[#11161f] border-l-4 rounded-r-[4px] p-4 space-y-3"
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/triage/${queue}/${item.id}`)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/triage/${queue}/${item.id}`) } }}
+      className="bg-[#11161f] border-l-4 rounded-r-[4px] p-4 space-y-3 cursor-pointer hover:bg-[#161c27] transition-colors focus:outline-none focus:ring-1 focus:ring-[#85b7eb]"
       style={{ borderLeftColor: severityColor(hazardLevel) }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -56,24 +60,12 @@ function QueueCard({
           {hazardLevel}/10
         </span>
       </div>
-
-      <div className="flex gap-2 flex-wrap">
-        {STATUSES.filter(s => s !== currentStatus).map(s => (
-          <button
-            key={s}
-            onClick={() => onUpdate(item.id, s)}
-            className="px-2 py-1 text-xs font-mono border border-[#85b7eb]/30 hover:border-[#85b7eb] rounded-[2px] text-[#5f5e5a] hover:text-[#e6f1fb] transition-colors"
-          >
-            → {s.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
 
 export function SecurityQueue(_props: SecurityQueueProps) {
-  const { items, loading, slow, error, reload, updateStatus } = useTriageQueue('security')
+  const { items, loading, slow, error, reload } = useTriageQueue('security')
 
   return (
     <div>
@@ -90,7 +82,7 @@ export function SecurityQueue(_props: SecurityQueueProps) {
             hazardLabel="Security"
             hazardLevel={item.security_hazard_level ?? 0}
             statusKey="security_status"
-            onUpdate={updateStatus}
+            queue="security"
           />
         ))}
       </div>
@@ -99,7 +91,7 @@ export function SecurityQueue(_props: SecurityQueueProps) {
 }
 
 export function MedicalQueue(_props: SecurityQueueProps) {
-  const { items, loading, slow, error, reload, updateStatus } = useTriageQueue('medical')
+  const { items, loading, slow, error, reload } = useTriageQueue('medical')
 
   return (
     <div>
@@ -116,7 +108,7 @@ export function MedicalQueue(_props: SecurityQueueProps) {
             hazardLabel="Biohazard"
             hazardLevel={item.biohazard_level ?? 0}
             statusKey="medical_status"
-            onUpdate={updateStatus}
+            queue="medical"
           />
         ))}
       </div>
@@ -125,7 +117,7 @@ export function MedicalQueue(_props: SecurityQueueProps) {
 }
 
 export function HazmatQueue(_props: SecurityQueueProps) {
-  const { items, loading, slow, error, reload, updateStatus } = useTriageQueue('hazmat')
+  const { items, loading, slow, error, reload } = useTriageQueue('hazmat')
 
   return (
     <div>
@@ -142,7 +134,7 @@ export function HazmatQueue(_props: SecurityQueueProps) {
             hazardLabel="Chemical"
             hazardLevel={item.chemical_hazard_level ?? 0}
             statusKey="hazmat_status"
-            onUpdate={updateStatus}
+            queue="hazmat"
           />
         ))}
       </div>
