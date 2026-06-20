@@ -122,7 +122,7 @@ export function HazmatQueue(_props: SecurityQueueProps) {
   return (
     <div>
       {loading && <p className="text-sm text-[#5f5e5a] font-mono animate-pulse">Loading hazmat queue…</p>}
-      <ColdStartNotice slow={slow} error={error} onRetry={reload} accentClass="border-red-700 text-red-400" />
+      <ColdStartNotice slow={slow} error={error} onRetry={reload} accentClass="border-red-700 text-red-400" textClass="text-[#5f5e5a]" />
       {!loading && !error && items.length === 0 && (
         <p className="text-sm text-[#5f5e5a] font-mono">No active hazmat threats.</p>
       )}
