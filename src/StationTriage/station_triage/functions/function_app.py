@@ -1,41 +1,34 @@
-import json
-import logging
 import os
-import sys
-
-import django
-
-sys.path.insert(0, os.path.dirname(__file__))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'function_settings')
-django.setup()
-
+import json
+import psycopg2
 import azure.functions as func
-from triage.models import ShipAssessment
 
 app = func.FunctionApp()
 
-@app.queue_trigger(
-    arg_name="msg",
-    queue_name="risk-assessment-queue",
-    connection="AzureWebJobsStorage"
-)
+@app.queue_trigger(arg_name="msg", queue_name="risk-assessment-queue", connection="AzureWebJobsStorage")
 def process_risk_assessment(msg: func.QueueMessage):
     try:
         body = json.loads(msg.get_body().decode('utf-8'))
         manifest = body['Manifest']
         assessment = body['Assessment']
 
-        ShipAssessment.objects.create(
-            ship_name=manifest['ShipName'],
-            callsign=manifest['Callsign'],
-            captain_name=manifest['CaptainName'],
-            cargo_items=manifest['CargoItems'],
-            passengers=manifest['Passengers'],
-            biohazard_level=assessment['BiohazardLevel'],
-            chemical_hazard_level=assessment['ChemicalHazardLevel'],
-            security_hazard_level=assessment['SecurityHazardLevel'],
-            recommendation=assessment['Recommendation']
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO triage_shipassessment
+               (ship_name, callsign, captain_name, cargo_items, passengers,
+                biohazard_level, chemical_hazard_level, security_hazard_level,
+                recommendation, security_status, medical_status, hazmat_status,
+                received_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'NEW', 'NEW', 'NEW', NOW())""",
+            (manifest['ShipName'], manifest['Callsign'], manifest['CaptainName'],
+             json.dumps(manifest['CargoItems']), json.dumps(manifest['Passengers']),
+             assessment['BiohazardLevel'], assessment['ChemicalHazardLevel'],
+             assessment['SecurityHazardLevel'], assessment['Recommendation'])
         )
+        conn.commit()
+        cur.close()
+        conn.close()
         print(f"Created ShipAssessment for {manifest['Callsign']}")
     except Exception as e:
         print(f"ERROR: {e}")
