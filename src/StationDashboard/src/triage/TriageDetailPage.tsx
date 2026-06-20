@@ -1,17 +1,18 @@
+import { type ChangeEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Layout from '../shared/Layout'
 import ColdStartNotice from '../shared/ColdStartNotice'
 import StatusBadge from './StatusBadge'
-import { useTriageDetail, type Queue } from './useTriageDetail'
+import { useTriageDetail, type Queue, type TriageDetail } from './useTriageDetail'
 
 type Status = 'NEW' | 'IN_PROGRESS' | 'RESOLVED'
 const STATUSES: Status[] = ['NEW', 'IN_PROGRESS', 'RESOLVED']
 
 const QUEUE_CONFIG: Record<Queue, {
   label: string
-  hazardField: string
+  hazardField: keyof TriageDetail
   hazardLabel: string
-  statusField: string
+  statusField: keyof TriageDetail
   accentClass: string
   severityBorder: (level: number) => string
 }> = {
@@ -69,11 +70,11 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
   const { detail, loading, slow, error, reload, updateStatus } = useTriageDetail(queue, id)
   const config = QUEUE_CONFIG[queue]
 
-  const currentStatus = (detail?.[config.statusField as keyof typeof detail] as Status | undefined) ?? 'NEW'
-  const hazardLevel = (detail?.[config.hazardField as keyof typeof detail] as number | undefined) ?? 0
+  const currentStatus = (detail?.[config.statusField] as Status | undefined) ?? 'NEW'
+  const hazardLevel = (detail?.[config.hazardField] as number | undefined) ?? 0
   const accentColor = config.severityBorder(hazardLevel)
 
-  async function handleStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  async function handleStatusChange(e: ChangeEvent<HTMLSelectElement>) {
     await updateStatus(e.target.value as Status)
   }
 
@@ -99,7 +100,7 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
 
         <ColdStartNotice slow={slow} error={error} onRetry={reload} accentClass={config.accentClass} />
 
-        {!loading && !error && detail && (
+        {!loading && detail && (
           <div
             className="bg-[#11161f] border-l-4 rounded-r-[4px] p-6 space-y-6"
             style={{ borderLeftColor: accentColor }}

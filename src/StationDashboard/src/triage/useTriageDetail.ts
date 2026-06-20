@@ -69,6 +69,7 @@ export function useTriageDetail(queue: Queue, id: string): UseTriageDetail {
 
   const updateStatus = useCallback(
     async (status: Status) => {
+      setError(null)
       try {
         const res = await fetch(`${BASE}/${queue}/${id}/`, {
           method: 'POST',
