@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import Layout from '../shared/Layout'
 import ColdStartNotice from '../shared/ColdStartNotice'
 import { useUniverseRules } from './useUniverseRules'
@@ -13,7 +13,7 @@ export default function AiConsolePage() {
     if (data) setIntel(data.universeIntel)
   }, [data])
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSave(e: FormEvent) {
     e.preventDefault()
     await save(intel)
   }

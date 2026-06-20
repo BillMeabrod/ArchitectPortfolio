@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import Layout from '../shared/Layout'
 import ColdStartNotice from '../shared/ColdStartNotice'
 import { useSubmitManifest } from './useSubmitManifest'
@@ -31,7 +31,7 @@ export default function ManifestsPage() {
     setter(list.filter((_, i) => i !== index))
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     await submit({
       shipName,

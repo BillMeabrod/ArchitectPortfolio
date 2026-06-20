@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const zones = [
@@ -7,7 +8,7 @@ const zones = [
 ]
 
 interface LayoutProps {
-  children: React.ReactNode
+  children: ReactNode
   zoneName: string
   headerClass: string
   pageClass?: string

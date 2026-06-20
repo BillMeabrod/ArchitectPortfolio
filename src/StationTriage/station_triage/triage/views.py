@@ -27,8 +27,14 @@ def security_queue(request):
 def security_detail(request, id):
     ship = get_object_or_404(ShipAssessment, id=id)
     if request.method == 'POST':
-        body = json.loads(request.body)
-        ship.security_status = body.get('security_status')
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        status_value = body.get('security_status')
+        if not status_value:
+            return JsonResponse({'error': 'security_status is required'}, status=400)
+        ship.security_status = status_value
         ship.save()
         return JsonResponse({'ok': True})
     data = {
@@ -67,8 +73,14 @@ def medical_queue(request):
 def medical_detail(request, id):
     ship = get_object_or_404(ShipAssessment, id=id)
     if request.method == 'POST':
-        body = json.loads(request.body)
-        ship.medical_status = body.get('medical_status')
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        status_value = body.get('medical_status')
+        if not status_value:
+            return JsonResponse({'error': 'medical_status is required'}, status=400)
+        ship.medical_status = status_value
         ship.save()
         return JsonResponse({'ok': True})
     data = {
@@ -107,8 +119,14 @@ def hazmat_queue(request):
 def hazmat_detail(request, id):
     ship = get_object_or_404(ShipAssessment, id=id)
     if request.method == 'POST':
-        body = json.loads(request.body)
-        ship.hazmat_status = body.get('hazmat_status')
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        status_value = body.get('hazmat_status')
+        if not status_value:
+            return JsonResponse({'error': 'hazmat_status is required'}, status=400)
+        ship.hazmat_status = status_value
         ship.save()
         return JsonResponse({'ok': True})
     data = {
