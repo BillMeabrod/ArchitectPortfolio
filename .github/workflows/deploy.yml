@@ -104,6 +104,7 @@ jobs:
           cp src/StationTriage/station_triage/functions/function_app.py staging/functions-deploy/
           cp src/StationTriage/station_triage/functions/host.json staging/functions-deploy/
           cp src/StationTriage/station_triage/functions/requirements.txt staging/functions-deploy/
+          cp src/StationTriage/station_triage/functions/function_settings.py staging/functions-deploy/
           cd staging/functions-deploy
           zip -r $GITHUB_WORKSPACE/station-triage-functions.zip . -x "*.pyc" -x "__pycache__/*"
       - name: Deploy Functions
