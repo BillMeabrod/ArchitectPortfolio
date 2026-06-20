@@ -49,6 +49,7 @@ export default function AiConsolePage() {
               error={null}
               onRetry={reload}
               accentClass="border-[#1d9e75] text-[#5dcaa5]"
+              textClass="text-[#5dcaa5]"
             />
           </div>
         )}
@@ -59,6 +60,7 @@ export default function AiConsolePage() {
             error={fetchError}
             onRetry={reload}
             accentClass="border-[#1d9e75] text-[#5dcaa5]"
+            textClass="text-[#5dcaa5]"
           />
         )}
 

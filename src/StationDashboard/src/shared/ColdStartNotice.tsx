@@ -3,9 +3,10 @@ interface ColdStartNoticeProps {
   error: string | null
   onRetry: () => void
   accentClass: string
+  textClass: string
 }
 
-export default function ColdStartNotice({ slow, error, onRetry, accentClass }: ColdStartNoticeProps) {
+export default function ColdStartNotice({ slow, error, onRetry, accentClass, textClass }: ColdStartNoticeProps) {
   if (error) {
     return (
       <div className="rounded border border-red-800 bg-red-950/40 p-4 text-sm">
@@ -22,7 +23,7 @@ export default function ColdStartNotice({ slow, error, onRetry, accentClass }: C
 
   if (slow) {
     return (
-      <p className="text-sm opacity-60 italic">
+      <p className={`text-sm opacity-80 italic ${textClass}`}>
         This is a portfolio project running on low-cost infrastructure — the backend may be waking
         up. This can take up to a minute on the first request.
       </p>

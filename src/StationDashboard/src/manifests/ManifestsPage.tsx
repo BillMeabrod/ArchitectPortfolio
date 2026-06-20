@@ -192,6 +192,7 @@ export default function ManifestsPage() {
                 error={error}
                 onRetry={() => void submit({ shipName, callsign, captainName, cargoItems: cargoItems.filter(Boolean), passengers: passengers.filter(Boolean) })}
                 accentClass="border-[#ef9f27] text-[#fac775]"
+                textClass="text-[#fac775]"
               />
               <button
                 type="submit"

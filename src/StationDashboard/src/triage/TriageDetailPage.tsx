@@ -98,7 +98,7 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
           <p className="text-sm text-[#5f5e5a] font-mono animate-pulse">Loading…</p>
         )}
 
-        <ColdStartNotice slow={slow} error={error} onRetry={reload} accentClass={config.accentClass} />
+        <ColdStartNotice slow={slow} error={error} onRetry={reload} accentClass="border-red-700 text-red-400" textClass="text-[#5f5e5a]" />
 
         {!loading && detail && (
           <div
