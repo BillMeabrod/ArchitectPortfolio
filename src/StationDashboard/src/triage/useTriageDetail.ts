@@ -17,8 +17,8 @@ export interface TriageDetail {
   medical_status?: Status
   hazmat_status?: Status
   recommendation: string
-  cargo_items: unknown[]
-  passengers: unknown[]
+  cargo_items: string[]
+  passengers: string[]
 }
 
 interface UseTriageDetail {

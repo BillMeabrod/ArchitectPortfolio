@@ -36,7 +36,7 @@ function QueueCard({
       role="button"
       tabIndex={0}
       onClick={() => navigate(`/triage/${queue}/${item.id}`)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/triage/${queue}/${item.id}`) }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/triage/${queue}/${item.id}`) } }}
       className="bg-[#11161f] border-l-4 rounded-r-[4px] p-4 space-y-3 cursor-pointer hover:bg-[#161c27] transition-colors focus:outline-none focus:ring-1 focus:ring-[#85b7eb]"
       style={{ borderLeftColor: severityColor(hazardLevel) }}
     >

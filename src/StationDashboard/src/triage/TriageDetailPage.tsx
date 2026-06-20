@@ -141,9 +141,9 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
                 </p>
                 <ul className="space-y-1">
                   {detail.cargo_items.map((item, i) => (
-                    <li key={i} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                    <li key={`cargo-${i}-${item}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
                       <span className="text-[#5f5e5a]">—</span>
-                      {String(item)}
+                      {item}
                     </li>
                   ))}
                 </ul>
@@ -157,9 +157,9 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
                 </p>
                 <ul className="space-y-1">
                   {detail.passengers.map((p, i) => (
-                    <li key={i} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                    <li key={`passenger-${i}-${p}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
                       <span className="text-[#5f5e5a]">—</span>
-                      {String(p)}
+                      {p}
                     </li>
                   ))}
                 </ul>
