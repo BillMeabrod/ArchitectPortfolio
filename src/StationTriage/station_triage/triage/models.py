@@ -1,4 +1,3 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 class ShipAssessment(models.Model):
@@ -10,9 +9,9 @@ class ShipAssessment(models.Model):
     passengers = models.JSONField()
 
     # Risk assessment data
-    biohazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
-    chemical_hazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
-    security_hazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
+    biohazard_level = models.IntegerField()
+    chemical_hazard_level = models.IntegerField()
+    security_hazard_level = models.IntegerField()
     recommendation = models.TextField()
 
     # Triage status per role
@@ -27,6 +26,22 @@ class ShipAssessment(models.Model):
 
     # Metadata
     received_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                name='biohazard_level_range',
+                condition=models.Q(biohazard_level__range=(0, 10)),
+            ),
+            models.CheckConstraint(
+                name='chemical_hazard_level_range',
+                condition=models.Q(chemical_hazard_level__range=(0, 10)),
+            ),
+            models.CheckConstraint(
+                name='security_hazard_level_range',
+                condition=models.Q(security_hazard_level__range=(0, 10)),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.callsign} - {self.ship_name}"
