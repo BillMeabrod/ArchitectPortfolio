@@ -1,8 +1,5 @@
 from django.db import models
 
-# Create your models here.
-from django.db import models
-
 class ShipAssessment(models.Model):
     # Ship manifest data
     ship_name = models.CharField(max_length=200)

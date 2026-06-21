@@ -3,10 +3,10 @@
     public class ManifestAuditLog
     {
         public int Id { get; set; }
-        public string Callsign { get; set; }
-        public string ShipName { get; set; }
-        public string CaptainName { get; set; }
+        public required string Callsign { get; set; }
+        public required string ShipName { get; set; }
+        public required string CaptainName { get; set; }
         public DateTimeOffset LoggedAt { get; set; } = DateTimeOffset.UtcNow;
-        public string RawPayload { get; set; }
+        public required string RawPayload { get; set; }
     }
 }

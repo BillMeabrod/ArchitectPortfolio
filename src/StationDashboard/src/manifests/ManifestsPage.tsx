@@ -3,32 +3,39 @@ import Layout from '../shared/Layout'
 import ColdStartNotice from '../shared/ColdStartNotice'
 import { useSubmitManifest } from './useSubmitManifest'
 
+interface ListRow {
+  id: string
+  value: string
+}
+
+function newRow(): ListRow {
+  return { id: crypto.randomUUID(), value: '' }
+}
+
 export default function ManifestsPage() {
   const { submit, result, loading, slow, error, reset } = useSubmitManifest()
 
   const [shipName, setShipName] = useState('')
   const [callsign, setCallsign] = useState('')
   const [captainName, setCaptainName] = useState('')
-  const [cargoItems, setCargoItems] = useState<string[]>([''])
-  const [passengers, setPassengers] = useState<string[]>([''])
+  const [cargoItems, setCargoItems] = useState<ListRow[]>([newRow()])
+  const [passengers, setPassengers] = useState<ListRow[]>([newRow()])
 
   function handleListChange(
-    list: string[],
-    setter: (v: string[]) => void,
-    index: number,
+    list: ListRow[],
+    setter: (v: ListRow[]) => void,
+    id: string,
     value: string,
   ) {
-    const next = [...list]
-    next[index] = value
-    setter(next)
+    setter(list.map(row => (row.id === id ? { ...row, value } : row)))
   }
 
-  function addItem(list: string[], setter: (v: string[]) => void) {
-    setter([...list, ''])
+  function addItem(list: ListRow[], setter: (v: ListRow[]) => void) {
+    setter([...list, newRow()])
   }
 
-  function removeItem(list: string[], setter: (v: string[]) => void, index: number) {
-    setter(list.filter((_, i) => i !== index))
+  function removeItem(list: ListRow[], setter: (v: ListRow[]) => void, id: string) {
+    setter(list.filter(row => row.id !== id))
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -37,8 +44,8 @@ export default function ManifestsPage() {
       shipName,
       callsign,
       captainName,
-      cargoItems: cargoItems.filter(Boolean),
-      passengers: passengers.filter(Boolean),
+      cargoItems: cargoItems.map(r => r.value).filter(Boolean),
+      passengers: passengers.map(r => r.value).filter(Boolean),
     })
   }
 
@@ -123,18 +130,18 @@ export default function ManifestsPage() {
             <div>
               <label className={labelClass}>Cargo Items</label>
               <div className="space-y-2">
-                {cargoItems.map((item, i) => (
-                  <div key={i} className="flex gap-2">
+                {cargoItems.map((row, i) => (
+                  <div key={row.id} className="flex gap-2">
                     <input
                       className={fieldClass}
-                      value={item}
-                      onChange={e => handleListChange(cargoItems, setCargoItems, i, e.target.value)}
+                      value={row.value}
+                      onChange={e => handleListChange(cargoItems, setCargoItems, row.id, e.target.value)}
                       placeholder={`Cargo item ${i + 1}`}
                     />
                     {cargoItems.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeItem(cargoItems, setCargoItems, i)}
+                        onClick={() => removeItem(cargoItems, setCargoItems, row.id)}
                         className="px-2 text-[#ba7517]/60 hover:text-red-400 transition-colors font-mono"
                         aria-label="Remove cargo item"
                       >
@@ -156,18 +163,18 @@ export default function ManifestsPage() {
             <div>
               <label className={labelClass}>Passengers</label>
               <div className="space-y-2">
-                {passengers.map((p, i) => (
-                  <div key={i} className="flex gap-2">
+                {passengers.map((row, i) => (
+                  <div key={row.id} className="flex gap-2">
                     <input
                       className={fieldClass}
-                      value={p}
-                      onChange={e => handleListChange(passengers, setPassengers, i, e.target.value)}
+                      value={row.value}
+                      onChange={e => handleListChange(passengers, setPassengers, row.id, e.target.value)}
                       placeholder={`Passenger ${i + 1}`}
                     />
                     {passengers.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeItem(passengers, setPassengers, i)}
+                        onClick={() => removeItem(passengers, setPassengers, row.id)}
                         className="px-2 text-[#ba7517]/60 hover:text-red-400 transition-colors font-mono"
                         aria-label="Remove passenger"
                       >
@@ -190,7 +197,15 @@ export default function ManifestsPage() {
               <ColdStartNotice
                 slow={slow}
                 error={error}
-                onRetry={() => void submit({ shipName, callsign, captainName, cargoItems: cargoItems.filter(Boolean), passengers: passengers.filter(Boolean) })}
+                onRetry={() =>
+                  void submit({
+                    shipName,
+                    callsign,
+                    captainName,
+                    cargoItems: cargoItems.map(r => r.value).filter(Boolean),
+                    passengers: passengers.map(r => r.value).filter(Boolean),
+                  })
+                }
                 accentClass="border-[#ef9f27] text-[#fac775]"
                 textClass="text-[#fac775]"
               />
