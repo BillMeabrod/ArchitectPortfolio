@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 class ShipAssessment(models.Model):
@@ -9,9 +10,9 @@ class ShipAssessment(models.Model):
     passengers = models.JSONField()
 
     # Risk assessment data
-    biohazard_level = models.IntegerField()
-    chemical_hazard_level = models.IntegerField()
-    security_hazard_level = models.IntegerField()
+    biohazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
+    chemical_hazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
+    security_hazard_level = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
     recommendation = models.TextField()
 
     # Triage status per role
