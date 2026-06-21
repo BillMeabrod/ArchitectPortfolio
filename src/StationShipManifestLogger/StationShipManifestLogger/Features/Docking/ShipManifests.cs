@@ -39,9 +39,9 @@ namespace StationShipManifestLogger.Features.Docking
         public List<string> Passengers { get; set; } = [];
     }
 
-    public class SubmitManifestReportHandler(StationDbContext context, ShipManifestQueuePublisher queuePublisher) : IRequestHandler<ManifestReportCommand, int>
+    public class SubmitManifestReportHandler(ManifestLoggerDbContext context, ShipManifestQueuePublisher queuePublisher) : IRequestHandler<ManifestReportCommand, int>
     {
-        private readonly StationDbContext _context = context;
+        private readonly ManifestLoggerDbContext _context = context;
         private readonly ShipManifestQueuePublisher _queuePublisher = queuePublisher;
 
         public async Task<int> Handle(ManifestReportCommand request, CancellationToken cancellationToken)

@@ -5,7 +5,7 @@ using StationShipManifestLogger.Features.Docking;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<StationDbContext>(options =>
+builder.Services.AddDbContext<ManifestLoggerDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var azureStorageConnection = builder.Configuration.GetConnectionString("AzureStorageConnection")
@@ -42,7 +42,7 @@ app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<StationDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<ManifestLoggerDbContext>();
     if (app.Environment.IsDevelopment())
     {
         db.Database.EnsureDeleted();

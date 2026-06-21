@@ -10,7 +10,7 @@ using StationShipManifestLogger.Common.Data;
 
 namespace StationShipManifestLogger.Migrations
 {
-    [DbContext(typeof(StationDbContext))]
+    [DbContext(typeof(ManifestLoggerDbContext))]
     [Migration("20260611171113_InitialSQLiteCreate")]
     partial class InitialSQLiteCreate
     {

@@ -2,9 +2,9 @@
 
 namespace StationShipManifestLogger.Common.Data;
 
-public class StationDbContext : DbContext
+public class ManifestLoggerDbContext : DbContext
 {
-    public StationDbContext(DbContextOptions<StationDbContext> options) : base(options)
+    public ManifestLoggerDbContext(DbContextOptions<ManifestLoggerDbContext> options) : base(options)
     {
     }
 
