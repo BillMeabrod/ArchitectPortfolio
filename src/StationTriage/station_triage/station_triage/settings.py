@@ -16,8 +16,13 @@ load_dotenv()
 import dj_database_url
 import os
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-for-local-dev-only')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'fallback-for-local-dev-only'
+    else:
+        raise ValueError('DJANGO_SECRET_KEY environment variable is not set. Fix your configuration.')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
