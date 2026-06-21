@@ -34,6 +34,8 @@ def security_detail(request, id):
         status_value = body.get('security_status')
         if not status_value:
             return JsonResponse({'error': 'security_status is required'}, status=400)
+        if status_value not in ShipAssessment.Status.values:
+            return JsonResponse({'error': f'security_status must be one of {ShipAssessment.Status.values}'}, status=400)
         ship.security_status = status_value
         ship.save()
         return JsonResponse({'ok': True})
@@ -80,6 +82,8 @@ def medical_detail(request, id):
         status_value = body.get('medical_status')
         if not status_value:
             return JsonResponse({'error': 'medical_status is required'}, status=400)
+        if status_value not in ShipAssessment.Status.values:
+            return JsonResponse({'error': f'medical_status must be one of {ShipAssessment.Status.values}'}, status=400)
         ship.medical_status = status_value
         ship.save()
         return JsonResponse({'ok': True})
@@ -126,6 +130,8 @@ def hazmat_detail(request, id):
         status_value = body.get('hazmat_status')
         if not status_value:
             return JsonResponse({'error': 'hazmat_status is required'}, status=400)
+        if status_value not in ShipAssessment.Status.values:
+            return JsonResponse({'error': f'hazmat_status must be one of {ShipAssessment.Status.values}'}, status=400)
         ship.hazmat_status = status_value
         ship.save()
         return JsonResponse({'ok': True})

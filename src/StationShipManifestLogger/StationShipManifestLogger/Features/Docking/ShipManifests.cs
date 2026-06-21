@@ -19,7 +19,7 @@ namespace StationShipManifestLogger.Features.Docking
         public async Task<IActionResult> Handle([FromBody] ManifestReportCommand manifestReport)
         {
             int auditId = await _mediatr.Send(manifestReport);
-            return Ok($"Successfully audited manifest under Audit ID {auditId}");
+            return Ok(new { auditId, message = $"Successfully audited manifest under Audit ID {auditId}" });
         }
     }
 

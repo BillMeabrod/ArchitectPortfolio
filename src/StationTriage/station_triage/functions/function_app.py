@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import psycopg2
 import azure.functions as func
 
@@ -7,6 +8,7 @@ app = func.FunctionApp()
 
 @app.queue_trigger(arg_name="msg", queue_name="risk-assessment-queue", connection="AzureWebJobsStorage")
 def process_risk_assessment(msg: func.QueueMessage):
+    conn = None
     try:
         body = json.loads(msg.get_body().decode('utf-8'))
         manifest = body['Manifest']
@@ -28,7 +30,9 @@ def process_risk_assessment(msg: func.QueueMessage):
         )
         conn.commit()
         cur.close()
-        conn.close()
-        print(f"Created ShipAssessment for {manifest['Callsign']}")
-    except Exception as e:
-        print(f"ERROR: {e}")
+        logging.info(f"Created ShipAssessment for {manifest['Callsign']}")
+    except Exception:
+        logging.exception("Failed to process risk assessment message")
+    finally:
+        if conn is not None:
+            conn.close()

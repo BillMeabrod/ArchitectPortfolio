@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from 'react'
 const BASE = import.meta.env.VITE_MANIFEST_API_URL as string
 
 interface SubmitResult {
-  auditId: string
+  auditId: number
 }
 
 interface UseSubmitManifest {
@@ -38,9 +38,8 @@ export function useSubmitManifest(): UseSubmitManifest {
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
-      const text = await res.text()
-      const match = text.match(/Audit ID (\d+)/)
-      setResult({ auditId: match ? match[1] : text })
+      const data = await res.json()
+      setResult({ auditId: data.auditId })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Submission failed')
     } finally {
