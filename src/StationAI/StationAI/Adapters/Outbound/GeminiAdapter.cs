@@ -1,6 +1,7 @@
 ﻿using Google.GenAI;
 using Google.GenAI.Types;
 using StationAI.Core.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Reflection;
 using Type = Google.GenAI.Types.Type;
@@ -59,8 +60,16 @@ namespace StationAI.Adapters.Outbound
             foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 var propType = prop.PropertyType == typeof(string) ? Type.String : Type.Integer;
+                var schema = new Schema { Type = propType };
 
-                properties.Add(prop.Name, new Schema { Type = propType });
+                var rangeAttr = prop.GetCustomAttribute<RangeAttribute>();
+                if (rangeAttr is not null && propType == Type.Integer)
+                {
+                    schema.Minimum = Convert.ToDouble(rangeAttr.Minimum);
+                    schema.Maximum = Convert.ToDouble(rangeAttr.Maximum);
+                }
+
+                properties.Add(prop.Name, schema);
                 requiredFields.Add(prop.Name);
             }
 

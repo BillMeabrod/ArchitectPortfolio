@@ -1,10 +1,18 @@
-﻿namespace StationAI.Core.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace StationAI.Core.Models
 {
     public class RiskAssessment
     {
-        public int BiohazardLevel {  get; set; }
+        [Range(0, 10)]
+        public int BiohazardLevel { get; set; }
+
+        [Range(0, 10)]
         public int ChemicalHazardLevel { get; set; }
+
+        [Range(0, 10)]
         public int SecurityHazardLevel { get; set; }
-        public string Recommendation { get; set;  } = string.Empty;
+
+        public string Recommendation { get; set; } = string.Empty;
     }
 }

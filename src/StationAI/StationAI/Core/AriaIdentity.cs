@@ -20,5 +20,7 @@ namespace StationAI.Core
             measures need to be taken to prevent it from gaining access to the interior of the station. If non-lethal 
             measures are sufficient to mitigate the risk then they should always be preferred.
             """;
+
+        public const string NoUniverseIntelFallback = "No current intel on the state of the universe is available.";
     }
 }

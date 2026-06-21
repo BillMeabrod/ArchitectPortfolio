@@ -17,18 +17,33 @@ namespace StationAI.Core.Services
 
         public async Task<RiskAssessment> AssessRisk(ShipManifest manifest)
         {
-            string universeRules = await _rulesRepository.GetRules();
+            string universeRules = await _rulesRepository.GetRules() ?? AriaIdentity.NoUniverseIntelFallback;
             string manifestJson = JsonSerializer.Serialize(manifest);
-
             string prompt = BuildPrompt(universeRules, manifestJson);
+
+            var assessment = await TryAssessOnce(prompt) ?? await TryAssessOnce(prompt);
+
+            return assessment ?? throw new InvalidOperationException(
+                "ARIA returned an out-of-range or invalid risk assessment twice in a row.");
+        }
+
+        private async Task<RiskAssessment?> TryAssessOnce(string prompt)
+        {
             string response = await _languageModelService.SendPrompt(prompt, typeof(RiskAssessment));
 
-            RiskAssessment responseModel = 
-                JsonSerializer.Deserialize<RiskAssessment>(response) 
-                ?? throw new InvalidOperationException("The AI gave an indeceipherable response.");
+            RiskAssessment? assessment = JsonSerializer.Deserialize<RiskAssessment>(response);
+            if (assessment is null)
+                return null;
 
-            return responseModel;
+            if (!IsInRange(assessment.BiohazardLevel) ||
+                !IsInRange(assessment.ChemicalHazardLevel) ||
+                !IsInRange(assessment.SecurityHazardLevel))
+                return null;
+
+            return assessment;
         }
+
+        private static bool IsInRange(int value) => value is >= 0 and <= 10;
 
         private string BuildPrompt(string universeRules, string manifestJson)
         {

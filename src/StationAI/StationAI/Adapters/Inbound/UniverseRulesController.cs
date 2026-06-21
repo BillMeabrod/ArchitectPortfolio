@@ -23,7 +23,7 @@ namespace StationAI.Adapters.Inbound
             return Ok(new
             {
                 coreDirective = AriaIdentity.CoreDirective,
-                universeIntel = universeIntel ?? "No current intel on the state of the universe is available."
+                universeIntel = universeIntel ?? AriaIdentity.NoUniverseIntelFallback
             });
         }
 
