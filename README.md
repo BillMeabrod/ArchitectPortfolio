@@ -82,7 +82,7 @@ App 1 has a single responsibility with minimal business logic. Vertical Slice is
 
 App 2 is the station's onboard AI system, named ARIA. It has two entry points.
 
-A **REST API** (`StationAI`) that exposes the current universe rules (editable prompt context) and allows them to be updated. If no rules have been saved yet, the GET endpoint returns a default message indicating no intel is available.
+A **REST API** (`StationAI`) that exposes the current universe rules (editable prompt context) and allows them to be updated. If no rules have been saved yet, the GET endpoint returns a default fallback message.
 
 An **Azure Function** (`StationAI.Functions`) that triggers on messages arriving in `ship-manifest-queue`. It retrieves the current rules, builds a prompt, calls the Gemini LLM, and parses the structured response into a `RiskAssessment` containing scores for Biohazard, Chemical Hazard, and Security Hazard (each 0-10), plus a plain-language recommendation. The assessment is then published to `risk-assessment-queue` for App 3 to consume.
 
@@ -90,7 +90,7 @@ An **Azure Function** (`StationAI.Functions`) that triggers on messages arriving
 
 Hexagonal Architecture (also known as Ports and Adapters) is chosen when the primary architectural concern is the volatility of external dependencies rather than the complexity of internal business logic. App 2's core logic is straightforward: build a prompt, call an LLM, parse the result. What is volatile is the LLM provider.
 
-Google Gemini is used today because it offers a free tier sufficient for portfolio traffic. The primary model is `gemini-3.1-flash-lite`, with `gemini-2.5-flash-lite` as a rate limit fallback. If Gemini removes the free tier, changes its API, or a better option emerges, the only change required is writing a new outbound adapter that implements `ILargeLanguageModelService`. The core, the rules repository, the queue publisher, and every inbound adapter remain completely untouched. The architecture makes the swap a single-file change by design.
+Google Gemini is used today because it offers a free tier sufficient for portfolio traffic. The primary model is `gemini-3.1-flash-lite`, with `gemini-2.5-flash-lite` as a fallback for transient failures (rate limits, server errors, timeouts). If Gemini removes the free tier, changes its API, or a better option emerges, the only change required is writing a new outbound adapter that implements `ILargeLanguageModelService`. The core, the rules repository, the queue publisher, and every inbound adapter remain completely untouched. The architecture makes the swap a single-file change by design.
 
 The same principle applies to rules storage. Rules are stored as a plain text blob in Azure Blob Storage, which is a simple and zero-cost solution for a single overwritable string. If the requirements evolved to support versioned rule history or multi-tenant rules, the `IRulesRepository` interface stays the same, and only the adapter changes.
 
@@ -99,12 +99,12 @@ The same principle applies to rules storage. Rules are stored as a plain text bl
 **Core** (business logic, no external dependencies):
 - `ILargeLanguageModelService`: outbound port for LLM calls
 - `IRulesRepository`: outbound port for rules persistence
-- `RiskAssessmentService`: assembles the prompt and orchestrates the assessment
+- `RiskAssessmentService`: assembles the prompt, calls the LLM, and validates the response, including a single retry if the result is malformed or contains out-of-range values
 - `RiskAssessment`, `ShipManifest`: core domain models
-- `AriaIdentity`: holds ARIA's fixed core directive as a constant, shared by the prompt builder and the rules API so both stay in sync with a single source of truth
+- `AriaIdentity`: holds ARIA's fixed core directive and shared fallback text as constants, referenced by both the prompt builder and the rules API so they stay in sync with a single source of truth
 
 **Outbound Adapters** (the core calls these):
-- `GeminiAdapter`: implements `ILargeLanguageModelService`, calls Google Gemini API, generates a JSON schema from the `RiskAssessment` type via reflection to enforce structured output
+- `GeminiAdapter`: implements `ILargeLanguageModelService`, calls Google Gemini API with a range-constrained response schema, generated via reflection from the `RiskAssessment` type's validation attributes, and falls back to a backup model on transient failures
 - `RulesBlobStorageAdapter`: implements `IRulesRepository`, reads and writes a single blob in Azure Blob Storage
 
 **Inbound Adapters** (these call the core):
@@ -124,6 +124,10 @@ The system prompt is structured in three deliberate sections.
 
 This structure ensures that the output contract (the JSON shape that App 3 depends on) can never be broken by user-edited rules, while still giving full flexibility over the tactical intelligence ARIA uses to make assessments.
 
+### Validation, end to end
+
+Hazard level scores are constrained at three independent layers, not just one. The Gemini request schema itself declares a minimum and maximum for each score, generated automatically from `[Range(0, 10)]` attributes on the `RiskAssessment` model. If Gemini still returns an out-of-range or malformed value despite the constrained schema (a real possibility, since structured output guarantees syntax, not semantics), `RiskAssessmentService` validates the result and retries once before failing loudly. Finally, Postgres itself enforces the same 0-10 range via `CheckConstraint`s on the `triage_shipassessment` table, so the constraint holds regardless of which process writes to that table.
+
 ---
 
 ## App 3: StationTriage
@@ -142,7 +146,9 @@ A standalone **Azure Function** that triggers on messages arriving in `risk-asse
 
 ### Why Django MTV?
 
-Django MTV is chosen here deliberately as a contrast to Apps 1 and 2. Where Vertical Slice and Hexagonal are explicit architectural choices suited to apps with either minimal layering needs or high external volatility, Django's MTV pattern represents the well-trodden path: a framework-provided structure that is conventional, productive, and appropriate when the problem domain (CRUD-style views over a relational model, role-based filtering) doesn't call for a bespoke architecture. Demonstrating the judgment to use a framework's native pattern when it fits, rather than imposing a custom pattern everywhere out of habit, is itself the point.
+This app exists partly to prove a point the first two don't: that the architectural reasoning throughout this project isn't tied to one language or ecosystem. App 3 is deliberately built in Python, a different language from Apps 1 and 2, specifically to demonstrate range, not just depth in a single stack.
+
+Django is the natural choice once Python is the language. It's the standard, widely-adopted framework for exactly this kind of application: CRUD-style views over a relational model, with real business logic and a real data layer. Using Django's own MTV convention, rather than working against the grain of the framework, keeps the codebase recognizable to anyone who knows Django, which matters for a project meant to be read and evaluated by other engineers.
 
 ### Key design decisions
 
@@ -173,6 +179,8 @@ The same reasoning that justified Vertical Slice for App 1 applies here: a small
 **No global state management library.** Each zone's data fetching lives in a dedicated hook (`useSubmitManifest`, `useUniverseRules`, `useTriageQueue`, `useTriageDetail`) using local component state and polling. Each zone is independent and nothing needs cross-zone shared state, so local state is sufficient here.
 
 **Explicit handling of low-cost infrastructure tradeoffs.** Every backend in this project runs on free or low-cost Azure tiers, which means real cold-start latency on the first request after idle. Rather than hiding this behind a generic spinner, the dashboard explicitly tells the user what's happening ("this backend may be waking up, this can take up to a minute") after a 5-second threshold. This is an honest acknowledgment of the infrastructure's real tradeoffs rather than a polished facade over them.
+
+**Stable identity for dynamic list rows.** The manifest form's cargo and passenger lists use a real, stable ID per row (generated once via `crypto.randomUUID()` at creation), not array index or row content, as the React key. This avoids the well-known class of bugs where adding, removing, or editing list items causes React to misattribute DOM state, focus, or input values between rows.
 
 ---
 
@@ -211,6 +219,18 @@ All Azure resources live in a single resource group: `SpaceStation-RG`.
 **SQLite on App Service persistent storage** replaces Azure SQL for App 1, eliminating database costs entirely for a workload that does not require a cloud-native relational database.
 
 Infrastructure for every app is defined as code using **Bicep** (`infra/main.bicep`, `infra/station-ai.bicep`, `infra/station-triage.bicep`, `infra/station-dashboard.bicep`), demonstrating familiarity with Azure IaC tooling.
+
+---
+
+## CI/CD
+
+All four apps deploy via a single GitHub Actions workflow (`.github/workflows/deploy.yml`) triggered on push to `main`, with one job per app.
+
+A few deliberate choices worth calling out:
+
+**The dashboard's build runs explicitly, not implicitly.** Azure Static Web Apps' deploy action can build the app itself using an internal, auto-detecting builder, but that builder does not necessarily run the project's own `package.json` build script, which meant TypeScript errors could pass through to production undetected. The pipeline now runs `npm install && npm run build` (the project's real build script, including its `tsc -b` type-check gate) as its own explicit step, then deploys the already-built output with `skip_app_build: true`. A broken type stops the deploy, loudly, before anything ships.
+
+**The build output is verified before it's deployed.** A short check confirms `dist/index.html` references a real compiled bundle (`/assets/...`) rather than raw source, catching a category of misconfiguration that a successful build alone cannot rule out.
 
 ---
 
@@ -340,7 +360,7 @@ The `.env.example` values point at the deployed Azure APIs by default. Replace t
 |-----|---------|-----|
 | StationShipManifestLogger | Vertical Slice | Single responsibility, minimal business logic, feature cohesion over layer separation |
 | StationAI | Hexagonal (Ports and Adapters) | High external dependency volatility, LLM provider and storage are both likely to change |
-| StationTriage | Django MTV | CRUD-style role-based views over a relational model; framework convention is the right fit, not a custom pattern |
+| StationTriage | Django MTV | Deliberately built in a second language to demonstrate range, with Django as the standard, recognizable choice for CRUD-style apps in that ecosystem |
 | StationDashboard | Vertical Slice (frontend) | Same single-responsibility, low-complexity reasoning as App 1, applied to React's feature-folder convention |
 
 | Concern | Decision | Rationale |
@@ -351,4 +371,5 @@ The `.env.example` values point at the deployed Azure APIs by default. Replace t
 | App 3 database | Postgres (Neon serverless) | Multiple concurrent readers and writers across web app and Function require real concurrency support, unlike App 1's single-writer log |
 | Rules storage | Azure Blob Storage | Single overwritable value, zero cost, eliminates unnecessary database dependency |
 | App 3 Function dependency model | Standalone (no Django import) | Avoids deployment coupling between the web app's and Function's dependency lists; the Function's `requirements.txt` accurately reflects only what it uses |
+| Hazard level validation | Schema constraint + app-level retry + DB `CheckConstraint` | No single point of failure; an out-of-range value is rejected regardless of which layer or process attempts to write it |
 | Hosting | Azure App Service F1 + Functions Flex Consumption + Static Web Apps | Zero fixed cost across every component, scales to zero, sufficient for portfolio traffic |
