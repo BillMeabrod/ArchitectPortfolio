@@ -6,6 +6,17 @@ Each backend application is deliberately built using a different architectural p
 
 ---
 
+## At a Glance
+
+- 🏗️ **4 services. 4 architectural patterns.** Vertical Slice, Hexagonal, Django MTV, feature-folder React, each chosen on purpose.
+- 🌐 **Polyglot by design.** .NET, Python, TypeScript, one engineer, real range.
+- 🤖 **AI with guardrails.** LLM output validated at three independent layers, schema, app logic, and the database itself.
+- ⚙️ **Full IaC + CI/CD.** Bicep-defined infrastructure, one pipeline, four services, zero manual deploys.
+- 🔗 **Event-driven and fully decoupled.** No service knows the others exist. Everything talks through queues.
+- ☁️ **Live on Azure right now.** Not a screenshot. [Click it.](https://agreeable-moss-0ff2e0510.7.azurestaticapps.net)
+
+---
+
 ## Live
 
 The dashboard is deployed and publicly reachable: **https://agreeable-moss-0ff2e0510.7.azurestaticapps.net**
@@ -155,6 +166,8 @@ Django is the natural choice once Python is the language. It's the standard, wid
 **The Azure Function is deliberately framework-free.** Although the web app uses Django's ORM, the Function does not import Django at all. It writes directly to Postgres via `psycopg2`. Early iterations attempted to share Django's `ShipAssessment` model between the web app and the Function, which created a real deployment coupling problem: the Function's deployment package needed to include the entire Django project tree to satisfy `INSTALLED_APPS`, and any change to the web app's dependencies broke the Function's ability to start, since it loaded the same `INSTALLED_APPS` list regardless of whether it actually used those apps. Decoupling the Function into a standalone script with its own minimal dependency list (`azure-functions`, `psycopg2-binary`) eliminated this coupling entirely. The Function now has an honest, accurate dependency list, and the two processes evolve independently.
 
 **Postgres over SQLite for this app specifically**, unlike App 1's SQLite choice. App 3's data is genuinely queried and filtered in different ways by three different consumers (the three role-based queues), and is written by two separate processes (the web app and the Function) that may run as multiple instances. SQLite's lack of robust concurrent-write support made it a poor fit here, whereas App 1's audit log is single-writer and append-only. Neon's serverless Postgres free tier keeps this at zero fixed cost while providing real concurrent access.
+
+**Authentication is not currently featured on any write endpoint.** The three detail views (`security_detail`, `medical_detail`, `hazmat_detail`) accept status updates via `@csrf_exempt` POST requests, since CSRF protection is meant for session-based browser form submissions, not a JSON API consumed cross-origin by the dashboard. No replacement authentication mechanism, API key, session check, or similar, exists in its place, since no user accounts exist anywhere in this project today. This is a reasonable starting point given the project's current scope, but it is a natural next step if the triage system grows in complexity, real user accounts, role-based permissions per specialist team, and audit trails tied to a specific person would all be worth adding at that point.
 
 ---
 
