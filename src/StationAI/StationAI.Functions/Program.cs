@@ -11,15 +11,18 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
+        var blobStorageConnection = Environment.GetEnvironmentVariable("BlobStorageConnection")
+            ?? throw new InvalidOperationException("BlobStorageConnection environment variable is not set. Fix your configuration.");
+        var azureWebJobsStorage = Environment.GetEnvironmentVariable("AzureWebJobsStorage")
+            ?? throw new InvalidOperationException("AzureWebJobsStorage environment variable is not set. Fix your configuration.");
+
         services.AddScoped<RiskAssessmentService>();
         services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
         services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
-        services.AddSingleton(new BlobServiceClient(
-            Environment.GetEnvironmentVariable("BlobStorageConnection")));
-        services.AddSingleton(new QueueServiceClient(
-            Environment.GetEnvironmentVariable("AzureWebJobsStorage")));
+        services.AddSingleton(new BlobServiceClient(blobStorageConnection));
+        services.AddSingleton(new QueueServiceClient(azureWebJobsStorage));
         services.AddScoped<RiskAssessmentQueuePublisher>();
-    })    
+    })
     .Build();
 
 await host.RunAsync();

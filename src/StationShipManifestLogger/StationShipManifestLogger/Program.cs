@@ -8,8 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<StationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddSingleton(new QueueServiceClient(
-    builder.Configuration.GetConnectionString("AzureStorageConnection")));
+var azureStorageConnection = builder.Configuration.GetConnectionString("AzureStorageConnection")
+    ?? throw new InvalidOperationException("AzureStorageConnection connection string is not set. Fix your configuration.");
+builder.Services.AddSingleton(new QueueServiceClient(azureStorageConnection));
 builder.Services.AddScoped<ShipManifestQueuePublisher>();
 builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg =>
