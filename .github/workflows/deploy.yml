@@ -124,6 +124,22 @@ jobs:
         run: |
           npm install
           npm run build
+      - name: Verify build output is a real production bundle
+        working-directory: src/StationDashboard
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "ERROR: dist/index.html does not exist. Build did not produce expected output."
+            exit 1
+          fi
+          if grep -q "/src/main.tsx" dist/index.html; then
+            echo "ERROR: dist/index.html references raw source (/src/main.tsx) instead of a compiled bundle. This is not a real production build."
+            exit 1
+          fi
+          if ! grep -q "/assets/" dist/index.html; then
+            echo "ERROR: dist/index.html does not reference a compiled /assets/ bundle as expected."
+            exit 1
+          fi
+          echo "Verified: dist/index.html references a real compiled bundle."
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
