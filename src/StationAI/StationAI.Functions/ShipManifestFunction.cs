@@ -47,7 +47,7 @@ public class ShipManifestFunction
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error processing manifest message. Message: {ex.Message}, Inner Exception: {ex.InnerException}");
+            _logger.LogError(ex, "Error processing manifest message for callsign {Callsign}", message);
             throw;
         }
     }
