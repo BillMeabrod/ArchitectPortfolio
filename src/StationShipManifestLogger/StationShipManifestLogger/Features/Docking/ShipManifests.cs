@@ -73,7 +73,7 @@ namespace StationShipManifestLogger.Features.Docking
             _queueClient = queueServiceClient.GetQueueClient("ship-manifest-queue");
         }
 
-        public async Task PublishAsync(object manifest)
+        public async Task PublishAsync(ShipManifestQueuePublisher manifest)
         {
             await _queueClient.CreateIfNotExistsAsync();
             var json = JsonSerializer.Serialize(manifest);
