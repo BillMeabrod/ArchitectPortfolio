@@ -10,7 +10,7 @@ using StationShipManifestLogger.Common.Data;
 namespace StationShipManifestLogger.Migrations
 {
     [DbContext(typeof(ManifestLoggerDbContext))]
-    partial class StationDbContextModelSnapshot : ModelSnapshot
+    partial class ManifestLoggerDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
