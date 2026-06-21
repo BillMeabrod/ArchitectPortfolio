@@ -13,6 +13,15 @@ namespace StationAI.Adapters.Outbound
         private readonly string _modelName = "gemini-3.1-flash-lite";
         private readonly string _backupModelName = "gemini-2.5-flash-lite";
 
+        private static readonly HttpStatusCode[] TransientStatusCodes =
+        [
+            HttpStatusCode.TooManyRequests,
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout
+        ];
+
         public async Task<string> SendPrompt(string prompt, System.Type targetSchemaType)
         {
             var config = new GenerateContentConfig
@@ -26,12 +35,21 @@ namespace StationAI.Adapters.Outbound
                 var response = await _client.Models.GenerateContentAsync(_modelName, prompt, config);
                 return response.Text ?? string.Empty;
             }
-            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+            catch (Exception ex) when (IsTransientFailure(ex))
             {
                 var response = await _client.Models.GenerateContentAsync(_backupModelName, prompt, config);
                 return response.Text ?? string.Empty;
             }
         }
+
+        private static bool IsTransientFailure(Exception ex) =>
+            ex switch
+            {
+                HttpRequestException http when http.StatusCode.HasValue => TransientStatusCodes.Contains(http.StatusCode.Value),
+                TaskCanceledException => true,
+                TimeoutException => true,
+                _ => false
+            };
 
         private Schema GenerateSchemaFromType(System.Type type)
         {
@@ -55,5 +73,3 @@ namespace StationAI.Adapters.Outbound
         }
     }
 }
-
-
