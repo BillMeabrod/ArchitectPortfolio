@@ -18,25 +18,25 @@ const QUEUE_CONFIG: Record<Queue, {
 }> = {
   security: {
     label: 'Security',
-    hazardField: 'security_hazard_level',
+    hazardField: 'securityHazardLevel',
     hazardLabel: 'Security Hazard',
-    statusField: 'security_status',
+    statusField: 'securityStatus',
     accentClass: 'border-red-700 text-red-400',
     severityBorder: (l) => l >= 8 ? '#ef4444' : l >= 5 ? '#f97316' : '#eab308',
   },
   medical: {
     label: 'Medical',
-    hazardField: 'biohazard_level',
+    hazardField: 'biohazardLevel',
     hazardLabel: 'Biohazard Level',
-    statusField: 'medical_status',
+    statusField: 'medicalStatus',
     accentClass: 'border-green-700 text-green-400',
     severityBorder: (l) => l >= 8 ? '#ef4444' : l >= 5 ? '#f97316' : '#eab308',
   },
   hazmat: {
     label: 'Hazmat',
-    hazardField: 'chemical_hazard_level',
+    hazardField: 'chemicalHazardLevel',
     hazardLabel: 'Chemical Hazard',
-    statusField: 'hazmat_status',
+    statusField: 'hazmatStatus',
     accentClass: 'border-orange-700 text-orange-400',
     severityBorder: (l) => l >= 8 ? '#ef4444' : l >= 5 ? '#f97316' : '#eab308',
   },
@@ -107,9 +107,13 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="font-mono font-bold text-xl text-[#e6f1fb]">{detail.ship_name}</h1>
+                <h1 className="font-mono font-bold text-xl text-[#e6f1fb]">
+                  {detail.inappropriateContent ? '[REDACTED]' : detail.shipName}
+                </h1>
                 <p className="text-sm text-[#5f5e5a] font-mono mt-1">
-                  {detail.callsign} &mdash; Capt. {detail.captain_name}
+                  {detail.inappropriateContent
+                    ? '[REDACTED] \u2014 Capt. [REDACTED]'
+                    : `${detail.callsign} \u2014 Capt. ${detail.captainName}`}
                 </p>
               </div>
               <StatusBadge status={currentStatus} />
@@ -135,18 +139,25 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
               </p>
             </div>
 
-            {Array.isArray(detail.cargo_items) && detail.cargo_items.length > 0 && (
+            {Array.isArray(detail.cargoItems) && detail.cargoItems.length > 0 && (
               <div>
                 <p className="text-xs font-mono text-[#5f5e5a] uppercase tracking-widest mb-2">
                   Cargo Items
                 </p>
                 <ul className="space-y-1">
-                  {detail.cargo_items.map((item, i) => (
-                    <li key={`cargo-${i}-${item}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
-                      <span className="text-[#5f5e5a]">—</span>
-                      {item}
-                    </li>
-                  ))}
+                  {detail.inappropriateContent
+                    ? (
+                      <li className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        [REDACTED]
+                      </li>
+                    )
+                    : detail.cargoItems.map((item, i) => (
+                      <li key={`cargo-${i}-${item}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        {item}
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}
@@ -157,12 +168,19 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
                   Passengers
                 </p>
                 <ul className="space-y-1">
-                  {detail.passengers.map((p, i) => (
-                    <li key={`passenger-${i}-${p}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
-                      <span className="text-[#5f5e5a]">—</span>
-                      {p}
-                    </li>
-                  ))}
+                  {detail.inappropriateContent
+                    ? (
+                      <li className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        [REDACTED]
+                      </li>
+                    )
+                    : detail.passengers.map((p, i) => (
+                      <li key={`passenger-${i}-${p}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        {p}
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}

@@ -22,5 +22,24 @@ namespace StationAI.Core
             """;
 
         public const string NoUniverseIntelFallback = "No current intel on the state of the universe is available.";
+
+        public const string ContentModerationGuidelines = """
+            Content moderation guidelines:
+
+            Flag as inappropriate if content contains:
+            - Racist, homophobic, or any other bigoted content targeting a group of people
+            - Graphic sexual content
+            - Gratuitously gory or disturbing descriptions of violence
+            - Explicit promotion or endorsement of drug use
+
+            Do NOT flag as inappropriate:
+            - Adult humor or dark comedy
+            - Mild violence without graphic gore
+            - Drug references that are not endorsing drug use
+            - Creative, funny, or edgy content that a reasonable adult would not find genuinely offensive
+            - Science fiction themes including conflict, danger, or morally complex scenarios
+
+            Be liberal, not conservative. Only flag content that would genuinely embarrass a professional if seen by a potential employer.
+            """;
     }
 }

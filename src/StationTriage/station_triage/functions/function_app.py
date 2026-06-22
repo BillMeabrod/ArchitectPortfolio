@@ -21,12 +21,13 @@ def process_risk_assessment(msg: func.QueueMessage):
                (ship_name, callsign, captain_name, cargo_items, passengers,
                 biohazard_level, chemical_hazard_level, security_hazard_level,
                 recommendation, security_status, medical_status, hazmat_status,
-                received_at)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'NEW', 'NEW', 'NEW', NOW())""",
+                inappropriate_content, received_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'NEW', 'NEW', 'NEW', %s, NOW())""",
             (manifest['ShipName'], manifest['Callsign'], manifest['CaptainName'],
              json.dumps(manifest['CargoItems']), json.dumps(manifest['Passengers']),
              assessment['BiohazardLevel'], assessment['ChemicalHazardLevel'],
-             assessment['SecurityHazardLevel'], assessment['Recommendation'])
+             assessment['SecurityHazardLevel'], assessment['Recommendation'],
+             assessment.get('InappropriateContent', False))
         )
         conn.commit()
         cur.close()

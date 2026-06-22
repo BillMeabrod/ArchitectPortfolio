@@ -26,6 +26,7 @@ class ShipAssessment(models.Model):
 
     # Metadata
     received_at = models.DateTimeField(auto_now_add=True)
+    inappropriate_content = models.BooleanField(default=False)
 
     class Meta:
         constraints = [

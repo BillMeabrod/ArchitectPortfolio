@@ -65,6 +65,20 @@ namespace StationAI.Core.Services
                 Analyze this incoming vessel payload schema and assign objective structural risk ratings:
                 
                 {manifestJson}
+
+                Additionally, evaluate this manifest for inappropriate content using these guidelines:
+
+                {AriaIdentity.ContentModerationGuidelines}
+
+                Set InappropriateContent to true if the manifest violates these guidelines.
+
+                When InappropriateContent is true, write the Recommendation in the voice of a weary,
+                deadpan station security officer who has seen this sort of submission before and is
+                not impressed. Acknowledge without being explicit that the content was detected and
+                censored. Give it dry wit that winks at the submitter. Format it as a real security
+                incident recommendation, just one involving a very different kind of threat.
+
+                When InappropriateContent is false, write a normal risk assessment recommendation.
                 """;
         }
     }
