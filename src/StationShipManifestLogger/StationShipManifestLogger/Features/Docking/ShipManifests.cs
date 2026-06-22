@@ -1,6 +1,7 @@
 ﻿using Azure.Storage.Queues;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using StationShipManifestLogger.Common.Data;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -16,6 +17,7 @@ namespace StationShipManifestLogger.Features.Docking
 
         [HttpPost]
         [Route("submit-manifest")]
+        [EnableRateLimiting("ManifestSubmission")]
         public async Task<IActionResult> Handle([FromBody] ManifestReportCommand manifestReport)
         {
             int auditId = await _mediatr.Send(manifestReport);
