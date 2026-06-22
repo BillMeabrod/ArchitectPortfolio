@@ -59,7 +59,14 @@ namespace StationAI.Adapters.Outbound
 
             foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                var propType = prop.PropertyType == typeof(string) ? Type.String : Type.Integer;
+                Type propType;
+                if (prop.PropertyType == typeof(string))
+                    propType = Type.String;
+                else if (prop.PropertyType == typeof(bool))
+                    propType = Type.Boolean;
+                else
+                    propType = Type.Integer;
+
                 var schema = new Schema { Type = propType };
 
                 var rangeAttr = prop.GetCustomAttribute<RangeAttribute>();
