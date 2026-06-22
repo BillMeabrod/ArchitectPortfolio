@@ -43,12 +43,12 @@ function QueueCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-mono font-bold text-[#e6f1fb]">
-            {item.inappropriate_content ? '[REDACTED]' : item.ship_name}
+            {item.inappropriateContent ? '[REDACTED]' : item.shipName}
           </p>
           <p className="text-xs text-[#5f5e5a] font-mono">
-            {item.inappropriate_content
+            {item.inappropriateContent
               ? '[REDACTED] \u2014 Capt. [REDACTED]'
-              : `${item.callsign} \u2014 Capt. ${item.captain_name}`}
+              : `${item.callsign} \u2014 Capt. ${item.captainName}`}
           </p>
         </div>
         <StatusBadge status={currentStatus} />
@@ -84,8 +84,8 @@ export function SecurityQueue(_props: SecurityQueueProps) {
             key={item.id}
             item={item}
             hazardLabel="Security"
-            hazardLevel={item.security_hazard_level ?? 0}
-            statusKey="security_status"
+            hazardLevel={item.securityHazardLevel ?? 0}
+            statusKey="securityStatus"
             queue="security"
           />
         ))}
@@ -110,8 +110,8 @@ export function MedicalQueue(_props: SecurityQueueProps) {
             key={item.id}
             item={item}
             hazardLabel="Biohazard"
-            hazardLevel={item.biohazard_level ?? 0}
-            statusKey="medical_status"
+            hazardLevel={item.biohazardLevel ?? 0}
+            statusKey="medicalStatus"
             queue="medical"
           />
         ))}
@@ -136,8 +136,8 @@ export function HazmatQueue(_props: SecurityQueueProps) {
             key={item.id}
             item={item}
             hazardLabel="Chemical"
-            hazardLevel={item.chemical_hazard_level ?? 0}
-            statusKey="hazmat_status"
+            hazardLevel={item.chemicalHazardLevel ?? 0}
+            statusKey="hazmatStatus"
             queue="hazmat"
           />
         ))}

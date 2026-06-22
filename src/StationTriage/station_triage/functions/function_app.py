@@ -27,7 +27,7 @@ def process_risk_assessment(msg: func.QueueMessage):
              json.dumps(manifest['CargoItems']), json.dumps(manifest['Passengers']),
              assessment['BiohazardLevel'], assessment['ChemicalHazardLevel'],
              assessment['SecurityHazardLevel'], assessment['Recommendation'],
-             assessment['InappropriateContent'])
+             assessment.get('InappropriateContent', False))
         )
         conn.commit()
         cur.close()

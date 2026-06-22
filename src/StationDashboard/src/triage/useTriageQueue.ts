@@ -7,16 +7,33 @@ type Status = 'NEW' | 'IN_PROGRESS' | 'RESOLVED'
 
 export interface TriageItem {
   id: number
-  ship_name: string
+  shipName: string
   callsign: string
-  captain_name: string
-  security_hazard_level?: number
-  biohazard_level?: number
-  chemical_hazard_level?: number
-  security_status?: Status
-  medical_status?: Status
-  hazmat_status?: Status
-  inappropriate_content: boolean
+  captainName: string
+  securityHazardLevel?: number
+  biohazardLevel?: number
+  chemicalHazardLevel?: number
+  securityStatus?: Status
+  medicalStatus?: Status
+  hazmatStatus?: Status
+  inappropriateContent: boolean
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapApiItem(raw: any): TriageItem {
+  return {
+    id: raw.id,
+    shipName: raw.ship_name,
+    callsign: raw.callsign,
+    captainName: raw.captain_name,
+    securityHazardLevel: raw.security_hazard_level,
+    biohazardLevel: raw.biohazard_level,
+    chemicalHazardLevel: raw.chemical_hazard_level,
+    securityStatus: raw.security_status,
+    medicalStatus: raw.medical_status,
+    hazmatStatus: raw.hazmat_status,
+    inappropriateContent: raw.inappropriate_content,
+  }
 }
 
 interface UseTriageQueue {
@@ -46,8 +63,8 @@ export function useTriageQueue(queue: Queue): UseTriageQueue {
     try {
       const res = await fetch(`${BASE}/${queue}/`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
-      const json: TriageItem[] = await res.json()
-      setItems(json)
+      const json = await res.json()
+      setItems(json.map(mapApiItem))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load queue')
     } finally {
@@ -59,10 +76,16 @@ export function useTriageQueue(queue: Queue): UseTriageQueue {
 
   useEffect(() => { load() }, [load])
 
-  const statusField: Record<Queue, string> = {
+  const statusFieldApi: Record<Queue, string> = {
     security: 'security_status',
     medical: 'medical_status',
     hazmat: 'hazmat_status',
+  }
+
+  const statusFieldState: Record<Queue, keyof TriageItem> = {
+    security: 'securityStatus',
+    medical: 'medicalStatus',
+    hazmat: 'hazmatStatus',
   }
 
   const updateStatus = useCallback(
@@ -71,12 +94,12 @@ export function useTriageQueue(queue: Queue): UseTriageQueue {
         const res = await fetch(`${BASE}/${queue}/${id}/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [statusField[queue]]: status }),
+          body: JSON.stringify({ [statusFieldApi[queue]]: status }),
         })
         if (!res.ok) throw new Error(`Server returned ${res.status}`)
         setItems(prev =>
           prev.map(item =>
-            item.id === id ? { ...item, [statusField[queue]]: status } : item,
+            item.id === id ? { ...item, [statusFieldState[queue]]: status } : item,
           ),
         )
       } catch (e) {

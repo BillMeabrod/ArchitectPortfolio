@@ -7,19 +7,39 @@ type Status = 'NEW' | 'IN_PROGRESS' | 'RESOLVED'
 
 export interface TriageDetail {
   id: number
-  ship_name: string
+  shipName: string
   callsign: string
-  captain_name: string
-  security_hazard_level?: number
-  biohazard_level?: number
-  chemical_hazard_level?: number
-  security_status?: Status
-  medical_status?: Status
-  hazmat_status?: Status
+  captainName: string
+  securityHazardLevel?: number
+  biohazardLevel?: number
+  chemicalHazardLevel?: number
+  securityStatus?: Status
+  medicalStatus?: Status
+  hazmatStatus?: Status
   recommendation: string
-  cargo_items: string[]
+  cargoItems: string[]
   passengers: string[]
-  inappropriate_content: boolean
+  inappropriateContent: boolean
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapApiDetail(raw: any): TriageDetail {
+  return {
+    id: raw.id,
+    shipName: raw.ship_name,
+    callsign: raw.callsign,
+    captainName: raw.captain_name,
+    securityHazardLevel: raw.security_hazard_level,
+    biohazardLevel: raw.biohazard_level,
+    chemicalHazardLevel: raw.chemical_hazard_level,
+    securityStatus: raw.security_status,
+    medicalStatus: raw.medical_status,
+    hazmatStatus: raw.hazmat_status,
+    recommendation: raw.recommendation,
+    cargoItems: raw.cargo_items,
+    passengers: raw.passengers,
+    inappropriateContent: raw.inappropriate_content,
+  }
 }
 
 interface UseTriageDetail {
@@ -31,10 +51,16 @@ interface UseTriageDetail {
   updateStatus: (status: Status) => Promise<void>
 }
 
-const statusField: Record<Queue, string> = {
+const statusFieldApi: Record<Queue, string> = {
   security: 'security_status',
   medical: 'medical_status',
   hazmat: 'hazmat_status',
+}
+
+const statusFieldState: Record<Queue, keyof TriageDetail> = {
+  security: 'securityStatus',
+  medical: 'medicalStatus',
+  hazmat: 'hazmatStatus',
 }
 
 export function useTriageDetail(queue: Queue, id: string): UseTriageDetail {
@@ -55,8 +81,8 @@ export function useTriageDetail(queue: Queue, id: string): UseTriageDetail {
     try {
       const res = await fetch(`${BASE}/${queue}/${id}/`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
-      const json: TriageDetail = await res.json()
-      setDetail(json)
+      const json = await res.json()
+      setDetail(mapApiDetail(json))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load detail')
     } finally {
@@ -75,11 +101,11 @@ export function useTriageDetail(queue: Queue, id: string): UseTriageDetail {
         const res = await fetch(`${BASE}/${queue}/${id}/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [statusField[queue]]: status }),
+          body: JSON.stringify({ [statusFieldApi[queue]]: status }),
         })
         if (!res.ok) throw new Error(`Server returned ${res.status}`)
         setDetail(prev =>
-          prev ? { ...prev, [statusField[queue]]: status } : prev,
+          prev ? { ...prev, [statusFieldState[queue]]: status } : prev,
         )
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Status update failed')
