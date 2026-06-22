@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using StationAI.Core;
 using StationAI.Core.Interfaces;
 using System.Text.Json;
@@ -36,6 +37,7 @@ namespace StationAI.Adapters.Inbound
         }
 
         [HttpPut]
+        [EnableRateLimiting("UniverseRulesSave")]
         public async Task<IActionResult> SaveRules([FromBody] string rules)
         {
             await _rulesRepository.SaveRules(rules);

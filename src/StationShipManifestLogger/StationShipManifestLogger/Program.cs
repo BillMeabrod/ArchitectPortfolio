@@ -1,7 +1,9 @@
 using Azure.Storage.Queues;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using StationShipManifestLogger.Common.Data;
 using StationShipManifestLogger.Features.Docking;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,17 @@ builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHealthChecks();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("ManifestSubmission", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429;
+});
 
 builder.Services.AddCors(options =>
 {
@@ -31,10 +44,10 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-
 app.UseHttpsRedirection();
 
 app.UseCors("DashboardPolicy");
+app.UseRateLimiter();
 
 app.UseAuthorization();
 app.MapControllers();
