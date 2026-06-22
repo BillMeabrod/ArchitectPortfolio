@@ -48,17 +48,17 @@ namespace StationAI.Adapters.Inbound
                     var llm = scope.ServiceProvider.GetRequiredService<ILargeLanguageModelService>();
                     var repo = scope.ServiceProvider.GetRequiredService<IRulesRepository>();
 
-                    var prompt = $"""
+                    var prompt = $$"""
                         You are a content moderation system for a public portfolio project.
                         Your only job is to determine whether the submitted text violates the following guidelines.
 
-                        {AriaIdentity.ContentModerationGuidelines}
+                        {{AriaIdentity.ContentModerationGuidelines}}
 
                         Respond only with a valid JSON object in this exact format, no explanation, no preamble, no markdown:
-                        {{ "inappropriate": true }} or {{ "inappropriate": false }}
+                        { "inappropriate": true } or { "inappropriate": false }
 
                         Text to evaluate:
-                        {rules}
+                        {{rules}}
                         """;
 
                     var response = await llm.SendPrompt(prompt, typeof(ModerationResponse));
