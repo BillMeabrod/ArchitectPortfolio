@@ -16,6 +16,7 @@ export interface TriageItem {
   security_status?: Status
   medical_status?: Status
   hazmat_status?: Status
+  inappropriate_content: boolean
 }
 
 interface UseTriageQueue {

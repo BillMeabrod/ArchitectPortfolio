@@ -14,5 +14,7 @@ namespace StationAI.Core.Models
         public int SecurityHazardLevel { get; set; }
 
         public string Recommendation { get; set; } = string.Empty;
+
+        public bool InappropriateContent { get; set; }
     }
 }

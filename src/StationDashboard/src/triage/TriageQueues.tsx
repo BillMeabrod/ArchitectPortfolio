@@ -42,9 +42,13 @@ function QueueCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-mono font-bold text-[#e6f1fb]">{item.ship_name}</p>
+          <p className="font-mono font-bold text-[#e6f1fb]">
+            {item.inappropriate_content ? '[REDACTED]' : item.ship_name}
+          </p>
           <p className="text-xs text-[#5f5e5a] font-mono">
-            {item.callsign} &mdash; Capt. {item.captain_name}
+            {item.inappropriate_content
+              ? '[REDACTED] \u2014 Capt. [REDACTED]'
+              : `${item.callsign} \u2014 Capt. ${item.captain_name}`}
           </p>
         </div>
         <StatusBadge status={currentStatus} />

@@ -18,6 +18,7 @@ def security_queue(request):
             'captain_name': s.captain_name,
             'security_hazard_level': s.security_hazard_level,
             'security_status': s.security_status,
+            'inappropriate_content': s.inappropriate_content,
         }
         for s in ships
     ]
@@ -49,6 +50,7 @@ def security_detail(request, id):
         'recommendation': ship.recommendation,
         'cargo_items': ship.cargo_items,
         'passengers': ship.passengers,
+        'inappropriate_content': ship.inappropriate_content,
     }
     return JsonResponse(data)
 
@@ -66,6 +68,7 @@ def medical_queue(request):
             'captain_name': s.captain_name,
             'biohazard_level': s.biohazard_level,
             'medical_status': s.medical_status,
+            'inappropriate_content': s.inappropriate_content,
         }
         for s in ships
     ]
@@ -97,6 +100,7 @@ def medical_detail(request, id):
         'recommendation': ship.recommendation,
         'cargo_items': ship.cargo_items,
         'passengers': ship.passengers,
+        'inappropriate_content': ship.inappropriate_content,
     }
     return JsonResponse(data)
 
@@ -114,6 +118,7 @@ def hazmat_queue(request):
             'captain_name': s.captain_name,
             'chemical_hazard_level': s.chemical_hazard_level,
             'hazmat_status': s.hazmat_status,
+            'inappropriate_content': s.inappropriate_content,
         }
         for s in ships
     ]
@@ -145,5 +150,6 @@ def hazmat_detail(request, id):
         'recommendation': ship.recommendation,
         'cargo_items': ship.cargo_items,
         'passengers': ship.passengers,
+        'inappropriate_content': ship.inappropriate_content,
     }
     return JsonResponse(data)

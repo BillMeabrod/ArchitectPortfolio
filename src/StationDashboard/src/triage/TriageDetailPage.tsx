@@ -107,9 +107,13 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="font-mono font-bold text-xl text-[#e6f1fb]">{detail.ship_name}</h1>
+                <h1 className="font-mono font-bold text-xl text-[#e6f1fb]">
+                  {detail.inappropriate_content ? '[REDACTED]' : detail.ship_name}
+                </h1>
                 <p className="text-sm text-[#5f5e5a] font-mono mt-1">
-                  {detail.callsign} &mdash; Capt. {detail.captain_name}
+                  {detail.inappropriate_content
+                    ? '[REDACTED] \u2014 Capt. [REDACTED]'
+                    : `${detail.callsign} \u2014 Capt. ${detail.captain_name}`}
                 </p>
               </div>
               <StatusBadge status={currentStatus} />
@@ -141,12 +145,19 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
                   Cargo Items
                 </p>
                 <ul className="space-y-1">
-                  {detail.cargo_items.map((item, i) => (
-                    <li key={`cargo-${i}-${item}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
-                      <span className="text-[#5f5e5a]">—</span>
-                      {item}
-                    </li>
-                  ))}
+                  {detail.inappropriate_content
+                    ? (
+                      <li className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        [REDACTED]
+                      </li>
+                    )
+                    : detail.cargo_items.map((item, i) => (
+                      <li key={`cargo-${i}-${item}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        {item}
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}
@@ -157,12 +168,19 @@ function DetailView({ queue, id }: { queue: Queue; id: string }) {
                   Passengers
                 </p>
                 <ul className="space-y-1">
-                  {detail.passengers.map((p, i) => (
-                    <li key={`passenger-${i}-${p}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
-                      <span className="text-[#5f5e5a]">—</span>
-                      {p}
-                    </li>
-                  ))}
+                  {detail.inappropriate_content
+                    ? (
+                      <li className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        [REDACTED]
+                      </li>
+                    )
+                    : detail.passengers.map((p, i) => (
+                      <li key={`passenger-${i}-${p}`} className="text-sm font-mono text-[#c9d8ea] flex gap-2">
+                        <span className="text-[#5f5e5a]">—</span>
+                        {p}
+                      </li>
+                    ))}
                 </ul>
               </div>
             )}

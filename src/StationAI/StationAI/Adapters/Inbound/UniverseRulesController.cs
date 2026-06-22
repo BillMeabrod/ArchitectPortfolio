@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StationAI.Core;
 using StationAI.Core.Interfaces;
+using System.Text.Json;
 
 namespace StationAI.Adapters.Inbound
 {
@@ -10,10 +11,17 @@ namespace StationAI.Adapters.Inbound
     public class UniverseRulesController : ControllerBase
     {
         private readonly IRulesRepository _rulesRepository;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<UniverseRulesController> _logger;
 
-        public UniverseRulesController(IRulesRepository rulesRepository)
+        public UniverseRulesController(
+            IRulesRepository rulesRepository,
+            IServiceProvider serviceProvider,
+            ILogger<UniverseRulesController> logger)
         {
             _rulesRepository = rulesRepository;
+            _serviceProvider = serviceProvider;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -31,7 +39,47 @@ namespace StationAI.Adapters.Inbound
         public async Task<IActionResult> SaveRules([FromBody] string rules)
         {
             await _rulesRepository.SaveRules(rules);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await using var scope = _serviceProvider.CreateAsyncScope();
+                    var llm = scope.ServiceProvider.GetRequiredService<ILargeLanguageModelService>();
+                    var repo = scope.ServiceProvider.GetRequiredService<IRulesRepository>();
+
+                    var prompt = $"""
+                        You are a content moderation system for a public portfolio project.
+                        Your only job is to determine whether the submitted text violates the following guidelines.
+
+                        {AriaIdentity.ContentModerationGuidelines}
+
+                        Respond only with a valid JSON object in this exact format, no explanation, no preamble, no markdown:
+                        {{ "inappropriate": true }} or {{ "inappropriate": false }}
+
+                        Text to evaluate:
+                        {rules}
+                        """;
+
+                    var response = await llm.SendPrompt(prompt, typeof(ModerationResponse));
+                    var result = JsonSerializer.Deserialize<ModerationResponse>(response,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (result?.Inappropriate == true)
+                        await repo.SaveRules(AriaIdentity.NoUniverseIntelFallback);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Universe rules moderation check failed; submitted content left in place.");
+                }
+            });
+
             return Ok();
+        }
+
+        private sealed class ModerationResponse
+        {
+            public bool Inappropriate { get; set; }
         }
     }
 }

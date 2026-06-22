@@ -19,6 +19,7 @@ export interface TriageDetail {
   recommendation: string
   cargo_items: string[]
   passengers: string[]
+  inappropriate_content: boolean
 }
 
 interface UseTriageDetail {
