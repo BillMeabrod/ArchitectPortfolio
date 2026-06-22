@@ -65,7 +65,13 @@ namespace StationAI.Adapters.Inbound
                     var result = JsonSerializer.Deserialize<ModerationResponse>(response,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    if (result?.Inappropriate == true)
+                    if (result is null)
+                    {
+                        _logger.LogWarning("Universe rules moderation check returned an unparseable response; submitted content left in place.");
+                        return;
+                    }
+
+                    if (result.Inappropriate)
                         await repo.SaveRules(AriaIdentity.NoUniverseIntelFallback);
                 }
                 catch (Exception ex)
