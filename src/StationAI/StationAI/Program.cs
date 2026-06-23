@@ -34,6 +34,21 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = 429;
 });
 
+builder.Services.AddSingleton<IEmbeddingService, GoogleEmbeddingAdapter>();
+
+builder.Services.AddSingleton<ILoreRepository>(sp =>
+{
+    var dbUrl = builder.Configuration.GetConnectionString("DatabaseUrl")
+        ?? throw new InvalidOperationException("DatabaseUrl connection string is required");
+    var qdrantUrl = builder.Configuration["Qdrant:Url"]
+        ?? throw new InvalidOperationException("Qdrant:Url configuration is required");
+    var qdrantApiKey = builder.Configuration["Qdrant:ApiKey"]
+        ?? throw new InvalidOperationException("Qdrant:ApiKey configuration is required");
+    var embeddingService = sp.GetRequiredService<IEmbeddingService>();
+
+    return new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, embeddingService);
+});
+
 var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStorageConnection")
     ?? throw new InvalidOperationException("BlobStorageConnection connection string is not set. Fix your configuration.");
 builder.Services.AddSingleton(new BlobServiceClient(blobStorageConnection));
