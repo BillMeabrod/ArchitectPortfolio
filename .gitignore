@@ -72,3 +72,7 @@ nunit-*.xml
 /src/StationTriage/station_triage/triage/__pycache__
 /src/StationTriage/station_triage/functions/local.settings.json
 /infra/station-triage.parameters.json
+/.vs
+/src/ArchitectPortfolio.AppHost/Properties/launchSettings.json
+/src/ArchitectPortfolio.AppHost/appsettings.Development.json
+/aspire.config.json
