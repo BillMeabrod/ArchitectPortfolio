@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\ArchitectPortfolio.ServiceDefaults\ArchitectPortfolio.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\ArchitectPortfolio.ServiceDefaults\ArchitectPortfolio.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
