@@ -34,12 +34,18 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DashboardPolicy", policy =>
     {
-        policy.WithOrigins(
-        "http://localhost:5173",
-        "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net"
-        )
-        .AllowAnyMethod()
-        .AllowAnyHeader();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins("https://agreeable-moss-0ff2e0510.7.azurestaticapps.net")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
     });
 });
 

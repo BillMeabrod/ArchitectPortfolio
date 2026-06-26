@@ -249,121 +249,67 @@ A few deliberate choices worth calling out:
 
 ## Running Locally
 
+The entire system — all five services plus their local infrastructure — runs with a single command via [.NET Aspire](https://aspire.dev). Aspire orchestrates startup ordering, injects connection strings, and surfaces every service's logs, traces, and health in one dashboard. The AppHost is a development-time concern only; it is never deployed, and no production service depends on it. In production each service is deployed independently and reads its configuration from Azure App Service settings.
+
 ### Prerequisites
+
 - .NET 10 SDK
 - Python 3.13+ (3.14 recommended to match production)
 - Node.js and npm
-- Azure Functions Core Tools v4
-- Azurite (Azure Storage emulator): `npm install -g azurite`
-- A Google Gemini API key
+- Azure Functions Core Tools v4 (`npm install -g azure-functions-core-tools@4`)
+- Docker Desktop (Aspire runs the Azurite storage emulator as a container)
+- A Google Gemini API key, available on your PATH as `GOOGLE_API_KEY`
 - A Neon (or any Postgres) connection string
 
-### App 1: StationShipManifestLogger
+A dedicated Neon **dev branch** is recommended so local development is fully isolated from production data. Neon branches are instant, free, and share storage copy-on-write with their parent.
+
+### One-time local configuration
+
+Three files hold local-only secrets and are gitignored. Create them before the first run.
+
+**AppHost user secrets** — the Neon dev branch URL and Qdrant key (Qdrant only applies on the RAG feature branch):
 
 ```bash
-cd src/StationShipManifestLogger/StationShipManifestLogger
-dotnet run
+cd src/ArchitectPortfolio.AppHost
+dotnet user-secrets set "Parameters:neon-dev-url" "<your Neon dev branch connection string>"
 ```
 
-User secrets required:
-```json
-{
-  "ConnectionStrings": {
-    "AzureStorageConnection": "UseDevelopmentStorage=true"
-  }
-}
+**Triage `.env`** at `src/StationTriage/station_triage/.env`:
+
 ```
-
-### App 2: StationAI (Web API)
-
-```bash
-cd src/StationAI/StationAI
-dotnet run
-```
-
-User secrets required:
-```json
-{
-  "ConnectionStrings": {
-    "BlobStorageConnection": "UseDevelopmentStorage=true"
-  },
-  "GOOGLE_API_KEY": "your-gemini-api-key"
-}
-```
-
-The deployed version supplies `GOOGLE_API_KEY` through an Azure App Service application setting instead.
-
-### App 2: StationAI.Functions
-
-Start Azurite first:
-```bash
-azurite
-```
-
-Then:
-```bash
-cd src/StationAI/StationAI.Functions
-func start
-```
-
-`local.settings.json` required (not committed):
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "BlobStorageConnection": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "FUNCTIONS_EXTENSION_VERSION": "~4"
-  }
-}
-```
-
-### App 3: StationTriage (Web App)
-
-```bash
-cd src/StationTriage/station_triage
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
-`.env` required (not committed):
-```
-DATABASE_URL=postgresql://user:password@host/dbname
-DJANGO_SECRET_KEY=your-local-secret-key
+DATABASE_URL=<your Neon dev branch connection string>
+DJANGO_SECRET_KEY=<any local value>
 DEBUG=True
 ```
 
-### App 3: StationTriage Function
+**Dashboard `.env.local`** at `src/StationDashboard/.env.local`:
+
+```
+VITE_MANIFEST_API_URL=https://localhost:7244
+VITE_AI_API_URL=https://localhost:7059
+VITE_TRIAGE_API_URL=http://localhost:8080
+```
+
+### Run everything
+
+Start Docker Desktop, then from the repository root:
 
 ```bash
-cd src/StationTriage/station_triage/functions
-func start
+aspire run
 ```
 
-`local.settings.json` required (not committed):
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "DATABASE_URL": "postgresql://user:password@host/dbname",
-    "FUNCTIONS_WORKER_RUNTIME": "python"
-  }
-}
-```
+Or set `ArchitectPortfolio.AppHost` as the startup project in Visual Studio and run it. The Aspire dashboard opens automatically and shows all five services plus the Azurite container coming up green. From there you can submit a manifest in the dashboard and watch it flow through the full pipeline: manifest logger to risk-assessment function to triage function to the database, surfaced back in the triage queues.
 
-### App 4: StationDashboard
+### How the local environment is wired
 
-```bash
-cd src/StationDashboard
-npm install
-cp .env.example .env
-npm run dev
-```
+- **Storage:** Azurite runs as an Aspire-managed container on the fixed default ports (10000/10001/10002), so every service receives the canonical `UseDevelopmentStorage=true` connection string and they all share one emulator. This is what lets the queue published by App 1 reach the function in App 2.
+- **Database:** Both the triage web app and the triage function point at the Neon dev branch via `DATABASE_URL`. Postgres is not containerized locally; a stable cloud endpoint avoids dynamic-port churn and keeps the dev schema isolated from production.
+- **CORS:** The .NET APIs allow any origin when running in the Development environment and lock down to the deployed origin in Production, mirroring the Django app's `DEBUG`-gated CORS. This means Aspire's dynamically assigned dashboard port never requires CORS maintenance.
+- **The triage Python function:** Aspire's first-class Azure Functions integration is .NET-only (it works by rewriting `dotnet run` into `func start` via MSBuild, a hook Python projects do not have). The Python function is therefore launched through a small `start.cmd` wrapper that creates its virtual environment if missing, installs requirements, activates it, and hands off to `func start`. This gives the Python function the same clone-and-run experience Aspire provides natively for the Django app.
 
-The `.env.example` values point at the deployed Azure APIs by default. Replace them with local URLs (for example `http://localhost:5000`) if running the backends locally too.
+### Running a single service in isolation
+
+Each service can still be run on its own with `dotnet run`, `func start`, or `python manage.py runserver` for focused debugging. When run outside Aspire, a service reads its configuration from its own user secrets, `local.settings.json`, or `.env` rather than from Aspire-injected environment variables. The `local.settings.json` files mirror the same values Aspire injects, so both modes work.
 
 ---
 

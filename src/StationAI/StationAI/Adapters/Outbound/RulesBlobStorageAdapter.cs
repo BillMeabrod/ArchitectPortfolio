@@ -5,17 +5,19 @@ namespace StationAI.Adapters.Outbound
 {
     public class RulesBlobStorageAdapter : IRulesRepository
     {
+        private readonly BlobContainerClient _containerClient;
         private readonly BlobClient _blobClient;
 
         public RulesBlobStorageAdapter(BlobServiceClient blobServiceClient)
         {
-            _blobClient = blobServiceClient
-                .GetBlobContainerClient("station-rules")
-                .GetBlobClient("current-rules.txt");
+            _containerClient = blobServiceClient.GetBlobContainerClient("station-rules");
+            _blobClient = _containerClient.GetBlobClient("current-rules.txt");
         }
 
         public async Task<string?> GetRules()
         {
+            await _containerClient.CreateIfNotExistsAsync();
+
             if (!await _blobClient.ExistsAsync())
                 return null;
 
@@ -25,6 +27,8 @@ namespace StationAI.Adapters.Outbound
 
         public async Task SaveRules(string rules)
         {
+            await _containerClient.CreateIfNotExistsAsync();
+
             await _blobClient.UploadAsync(
                 BinaryData.FromString(rules), overwrite: true);
         }
