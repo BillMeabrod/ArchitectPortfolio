@@ -16,8 +16,6 @@ namespace StationAI.Adapters.Outbound
 
         public async Task<string?> GetRules()
         {
-            await _containerClient.CreateIfNotExistsAsync();
-
             if (!await _blobClient.ExistsAsync())
                 return null;
 
