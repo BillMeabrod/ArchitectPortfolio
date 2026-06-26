@@ -33,11 +33,21 @@ var dashboard = builder.AddViteApp("station-dashboard", "../StationDashboard");
 var triage = builder.AddPythonApp("station-triage", "../StationTriage/station_triage", "manage.py")
     .WithArgs("runserver", "0.0.0.0:8080");
 
+var triageFunctionWorkingDirectory = "../StationTriage/station_triage/functions";
+var triageFunctionExecutable = OperatingSystem.IsWindows() ? "cmd" : "bash";
+var triageFunctionArgs = OperatingSystem.IsWindows()
+    ? new[] { "/c", "start.cmd" }
+    : new[]
+    {
+        "-lc",
+        "if [ ! -d .venv ]; then python3 -m venv .venv; fi && . .venv/bin/activate && python -m pip install -r requirements.txt --quiet && func start --port 7072"
+    };
+
 var triageFunction = builder.AddExecutable(
         "triage-function",
-        "cmd",
-        "../StationTriage/station_triage/functions",
-        "/c", "start.cmd")
+        triageFunctionExecutable,
+        triageFunctionWorkingDirectory,
+        triageFunctionArgs)
     .WithEnvironment("AzureWebJobsStorage", "UseDevelopmentStorage=true")
     .WithEnvironment("FUNCTIONS_WORKER_RUNTIME", "python")
     .WithEnvironment("DATABASE_URL", neonDevUrl)
