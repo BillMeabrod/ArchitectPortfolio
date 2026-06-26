@@ -37,11 +37,7 @@ var triageFunctionWorkingDirectory = "../StationTriage/station_triage/functions"
 var triageFunctionExecutable = OperatingSystem.IsWindows() ? "cmd" : "bash";
 var triageFunctionArgs = OperatingSystem.IsWindows()
     ? new[] { "/c", "start.cmd" }
-    : new[]
-    {
-        "-lc",
-        "if [ ! -d .venv ]; then python3 -m venv .venv; fi && . .venv/bin/activate && python -m pip install -r requirements.txt --quiet && func start --port 7072"
-    };
+    : new[] { "start.sh" };
 
 var triageFunction = builder.AddExecutable(
         "triage-function",
