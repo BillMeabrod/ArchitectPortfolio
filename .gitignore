@@ -67,8 +67,12 @@ nunit-*.xml
 /src/StationShipManifestLogger/StationShipManifestLogger/appsettings.Development.json
 /src/StationTriage/station_triage/db.sqlite3
 /src/StationTriage/station_triage/functions/__pycache__
+/src/StationTriage/station_triage/functions/.venv/
 /src/StationTriage/station_triage/station_triage/__pycache__
 /src/StationTriage/station_triage/triage/migrations/__pycache__
 /src/StationTriage/station_triage/triage/__pycache__
 /src/StationTriage/station_triage/functions/local.settings.json
 /infra/station-triage.parameters.json
+/.vs
+/src/ArchitectPortfolio.AppHost/Properties/launchSettings.json
+/src/ArchitectPortfolio.AppHost/appsettings.Development.json
