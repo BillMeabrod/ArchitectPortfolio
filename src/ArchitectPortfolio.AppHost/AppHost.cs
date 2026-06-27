@@ -1,7 +1,7 @@
-
-
 var builder = DistributedApplication.CreateBuilder(args);
 var neonDevUrl = builder.AddParameter("neon-dev-url", secret: true);
+var qdrantUrl = builder.AddParameter("qdrant-url", secret: true);
+var qdrantApiKey = builder.AddParameter("qdrant-api-key", secret: true);
 
 // Azurite on fixed default ports so UseDevelopmentStorage=true resolves correctly.
 var storage = builder.AddAzureStorage("storage")
@@ -19,12 +19,20 @@ var manifestLogger = builder.AddProject<Projects.StationShipManifestLogger>("man
 
 var stationAi = builder.AddProject<Projects.StationAI>("station-ai")
     .WithEnvironment("ConnectionStrings__BlobStorageConnection", "UseDevelopmentStorage=true")
+    .WithEnvironment("ConnectionStrings__DatabaseUrl", neonDevUrl)
+    .WithEnvironment("Qdrant__Url", qdrantUrl)
+    .WithEnvironment("Qdrant__ApiKey", qdrantApiKey)
+    .WithEnvironment("Qdrant__Collection", "station-lore-dev")
     .WithHttpsEndpoint(port: 7059, name: "https")
     .WaitFor(storage);
 
 var stationAiFunctions = builder.AddProject<Projects.StationAI_Functions>("station-ai-functions")
     .WithEnvironment("AzureWebJobsStorage", "UseDevelopmentStorage=true")
     .WithEnvironment("BlobStorageConnection", "UseDevelopmentStorage=true")
+    .WithEnvironment("ConnectionStrings__DatabaseUrl", neonDevUrl)
+    .WithEnvironment("Qdrant__Url", qdrantUrl)
+    .WithEnvironment("Qdrant__ApiKey", qdrantApiKey)
+    .WithEnvironment("Qdrant__Collection", "station-lore-dev")
     .WaitFor(storage)
     .WaitFor(stationAi);
 

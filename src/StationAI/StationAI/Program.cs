@@ -55,7 +55,9 @@ builder.Services.AddSingleton<ILoreRepository>(sp =>
         ?? throw new InvalidOperationException("Qdrant:ApiKey configuration is required");
     var embeddingService = sp.GetRequiredService<IEmbeddingService>();
 
-    return new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, embeddingService);
+    var collectionName = builder.Configuration["Qdrant:Collection"] ?? "station-lore";
+
+    return new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, collectionName, embeddingService);
 });
 
 var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStorageConnection")
