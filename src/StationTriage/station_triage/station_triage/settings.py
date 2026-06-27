@@ -28,13 +28,17 @@ if not SECRET_KEY:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-ALLOWED_HOSTS = ['station-triage-web.azurewebsites.net', '169.254.131.1']
-CSRF_TRUSTED_ORIGINS = ['https://station-triage-web.azurewebsites.net']
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net",
-]
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+    CSRF_TRUSTED_ORIGINS = ['http://localhost:8080']
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    ALLOWED_HOSTS = ['station-triage-web.azurewebsites.net', '169.254.131.1']
+    CSRF_TRUSTED_ORIGINS = ['https://station-triage-web.azurewebsites.net']
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net",
+    ]
 
 
 # Application definition
@@ -85,11 +89,12 @@ WSGI_APPLICATION = 'station_triage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    raise RuntimeError('DATABASE_URL is not set. Fix your configuration.')
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600,
-    )
+    'default': dj_database_url.parse(database_url, conn_max_age=600)
 }
 
 

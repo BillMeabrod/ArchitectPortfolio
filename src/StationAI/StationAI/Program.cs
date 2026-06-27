@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.RateLimiting;
+using Scalar.AspNetCore;
 using StationAI.Adapters.Outbound;
 using StationAI.Core.Interfaces;
 using System.Threading.RateLimiting;
@@ -15,12 +16,18 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DashboardPolicy", policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5173",
-            "https://agreeable-moss-0ff2e0510.7.azurestaticapps.net"
-        )
-        .AllowAnyMethod()
-        .AllowAnyHeader();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins("https://agreeable-moss-0ff2e0510.7.azurestaticapps.net")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
     });
 });
 
@@ -38,6 +45,7 @@ builder.Services.AddRateLimiter(options =>
 
 var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStorageConnection")
     ?? throw new InvalidOperationException("BlobStorageConnection connection string is not set. Fix your configuration.");
+
 builder.Services.AddSingleton(new BlobServiceClient(blobStorageConnection));
 builder.Services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
@@ -50,15 +58,13 @@ app.MapDefaultEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors("DashboardPolicy");
 app.UseRateLimiter();
-
 app.UseAuthorization();
-
 app.MapControllers();
 app.UseHealthChecks("/health");
 app.Run();
