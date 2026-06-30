@@ -2,7 +2,7 @@
 
 
 
-\## Code Comments
+\## Code Comment
 
 Do not add comments that restate what the code does. Only comment:
 
