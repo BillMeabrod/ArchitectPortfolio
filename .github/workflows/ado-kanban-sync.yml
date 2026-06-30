@@ -101,6 +101,15 @@ jobs:
           echo "target_state=$TARGET_STATE" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------------------------
+      # TEMP DEBUG: isolate whether vars.* resolves at all in this job
+      # ----------------------------------------------------------
+      - name: Debug raw vars context
+        run: |
+          echo "Direct interpolation test:"
+          echo "ADO_ORG_URL=${{ vars.ADO_ORG_URL }}"
+          echo "ADO_PROJECT=${{ vars.ADO_PROJECT }}"
+
+      # ----------------------------------------------------------
       # 3. Verify the work item exists and is reachable before
       #    attempting to patch it. Surfaces auth and ID problems
       #    with a clear error rather than a cryptic patch failure.
