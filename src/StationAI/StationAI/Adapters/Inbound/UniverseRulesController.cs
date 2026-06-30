@@ -11,12 +11,12 @@ namespace StationAI.Adapters.Inbound
     [Route("api/[controller]")]
     public class UniverseRulesController : ControllerBase
     {
-        private readonly IRulesRepository _rulesRepository;
+        private readonly IStationDirectiveRepository _rulesRepository;
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<UniverseRulesController> _logger;
 
         public UniverseRulesController(
-            IRulesRepository rulesRepository,
+            IStationDirectiveRepository rulesRepository,
             IServiceProvider serviceProvider,
             ILogger<UniverseRulesController> logger)
         {
@@ -48,7 +48,7 @@ namespace StationAI.Adapters.Inbound
                 {
                     await using var scope = _serviceProvider.CreateAsyncScope();
                     var llm = scope.ServiceProvider.GetRequiredService<ILargeLanguageModelService>();
-                    var repo = scope.ServiceProvider.GetRequiredService<IRulesRepository>();
+                    var repo = scope.ServiceProvider.GetRequiredService<IStationDirectiveRepository>();
 
                     var prompt = $$"""
                         You are a content moderation system for a public portfolio project.
