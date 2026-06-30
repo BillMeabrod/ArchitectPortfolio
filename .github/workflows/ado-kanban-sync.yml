@@ -24,11 +24,16 @@
 #   Done   → Closed
 #   To Do  → New
 #
-# REQUIRED SECRETS (repo Settings → Secrets → Actions):
-#   ADO_ORG_URL   — e.g. https://dev.azure.com/yourorg
-#   ADO_PROJECT   — your ADO project name (spaces are fine)
-#   ADO_PAT       — Personal Access Token with Work Items (Read & Write) scope
-#                   Generate at: dev.azure.com → User Settings → Personal Access Tokens
+# REQUIRED CONFIGURATION:
+#   Repo Settings → Secrets and variables → Actions
+#
+#   Variables tab (not secrets — these aren't sensitive):
+#     ADO_ORG_URL   — e.g. https://dev.azure.com/yourorg
+#     ADO_PROJECT   — your ADO project name (spaces are fine)
+#
+#   Secrets tab (this one IS sensitive):
+#     ADO_PAT       — Personal Access Token with Work Items (Read & Write) scope
+#                     Generate at: dev.azure.com → User Settings → Personal Access Tokens
 # ============================================================
 
 name: Azure DevOps Kanban Sync
@@ -103,8 +108,8 @@ jobs:
       - name: Verify work item exists
         id: verify_item
         env:
-          ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
-          ADO_PROJECT: ${{ secrets.ADO_PROJECT }}
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
           ADO_PAT: ${{ secrets.ADO_PAT }}
           WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
         run: |
@@ -161,8 +166,8 @@ jobs:
       - name: Update ADO work item state
         id: update_state
         env:
-          ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
-          ADO_PROJECT: ${{ secrets.ADO_PROJECT }}
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
           ADO_PAT: ${{ secrets.ADO_PAT }}
           WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
           TARGET_STATE: ${{ steps.determine_state.outputs.target_state }}
@@ -223,8 +228,8 @@ jobs:
       # ----------------------------------------------------------
       - name: Comment on ADO work item with PR link
         env:
-          ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
-          ADO_PROJECT: ${{ secrets.ADO_PROJECT }}
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
           ADO_PAT: ${{ secrets.ADO_PAT }}
           WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
           TARGET_STATE: ${{ steps.determine_state.outputs.target_state }}
