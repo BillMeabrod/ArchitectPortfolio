@@ -101,35 +101,6 @@ jobs:
           echo "target_state=$TARGET_STATE" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------------------------
-      # TEMP DEBUG: isolate whether vars.* resolves at all in this job
-      # ----------------------------------------------------------
-      - name: Debug raw vars context
-        run: |
-          echo "Direct interpolation test:"
-          echo "ADO_ORG_URL=${{ vars.ADO_ORG_URL }}"
-          echo "ADO_PROJECT=${{ vars.ADO_PROJECT }}"
-
-      # ----------------------------------------------------------
-      # TEMP DEBUG: minimal raw curl call with verbose output
-      # ----------------------------------------------------------
-      - name: Debug raw curl call
-        env:
-          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
-          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
-          ADO_PAT: ${{ secrets.ADO_PAT }}
-          WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
-        run: |
-          curl --version
-          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
-          echo "AUTH header length: ${#AUTH}"
-          ITEM_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
-          curl -v \
-            --request GET \
-            --url "$ITEM_URL" \
-            --header "Authorization: Basic ${AUTH}" \
-            --header "Accept: application/json" || echo "curl exit code: $?"
-
-      # ----------------------------------------------------------
       # 3. Verify the work item exists and is reachable before
       #    attempting to patch it. Surfaces auth and ID problems
       #    with a clear error rather than a cryptic patch failure.
@@ -143,20 +114,32 @@ jobs:
           WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
         run: |
           # ADO REST API uses Basic auth with a PAT — username is empty, PAT is the password
-          AUTH=$(echo -n ":${ADO_PAT}" | base64)
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
 
           ITEM_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
 
           echo "Verifying work item $WORK_ITEM_ID at $ITEM_URL"
 
-          HTTP_RESPONSE=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" \
+          # Write the response body to a temp file and capture the status code
+          # separately. This avoids fragile string-parsing of a combined
+          # --write-out payload, which proved unreliable on this runner image.
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
             --request GET \
             --url "$ITEM_URL" \
             --header "Authorization: Basic ${AUTH}" \
             --header "Accept: application/json")
+          CURL_EXIT=$?
 
-          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]+$//')
-          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | grep -oE 'HTTPSTATUS:[0-9]+' | cut -d: -f2)
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::error::curl failed with exit code $CURL_EXIT while contacting ADO."
+            echo "::error::This usually means a network issue or a malformed URL."
+            cat "$BODY_FILE"
+            exit 1
+          fi
+
+          HTTP_BODY=$(cat "$BODY_FILE")
+          rm -f "$BODY_FILE"
 
           if [ "$HTTP_STATUS" = "401" ]; then
             echo "::error::ADO returned 401 Unauthorized."
@@ -201,7 +184,7 @@ jobs:
           WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
           TARGET_STATE: ${{ steps.determine_state.outputs.target_state }}
         run: |
-          AUTH=$(echo -n ":${ADO_PAT}" | base64)
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
 
           PATCH_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
 
@@ -220,16 +203,24 @@ jobs:
 
           echo "Patching work item $WORK_ITEM_ID → state: $TARGET_STATE"
 
-          HTTP_RESPONSE=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" \
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
             --request PATCH \
             --url "$PATCH_URL" \
             --header "Authorization: Basic ${AUTH}" \
             --header "Accept: application/json" \
             --header "Content-Type: application/json-patch+json" \
             --data "$PATCH_BODY")
+          CURL_EXIT=$?
 
-          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]+$//')
-          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | grep -oE 'HTTPSTATUS:[0-9]+' | cut -d: -f2)
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::error::curl failed with exit code $CURL_EXIT while patching ADO work item."
+            cat "$BODY_FILE"
+            exit 1
+          fi
+
+          HTTP_BODY=$(cat "$BODY_FILE")
+          rm -f "$BODY_FILE"
 
           if [ "$HTTP_STATUS" = "400" ]; then
             echo "::error::ADO rejected the state transition (HTTP 400)."
@@ -269,7 +260,7 @@ jobs:
           PR_MERGED: ${{ github.event.pull_request.merged }}
           PR_ACTOR: ${{ github.actor }}
         run: |
-          AUTH=$(echo -n ":${ADO_PAT}" | base64)
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
 
           COMMENT_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}/comments?api-version=7.1-preview.3"
 
@@ -292,18 +283,22 @@ jobs:
           print(json.dumps({'text': html}))
           ")
 
-          HTTP_RESPONSE=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" \
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
             --request POST \
             --url "$COMMENT_URL" \
             --header "Authorization: Basic ${AUTH}" \
             --header "Accept: application/json" \
             --header "Content-Type: application/json" \
             --data "$COMMENT_BODY")
+          CURL_EXIT=$?
 
-          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | grep -oE 'HTTPSTATUS:[0-9]+' | cut -d: -f2)
-          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -E 's/HTTPSTATUS:[0-9]+$//')
+          HTTP_BODY=$(cat "$BODY_FILE" 2>/dev/null || echo "")
+          rm -f "$BODY_FILE"
 
-          if [ "$HTTP_STATUS" != "200" ]; then
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::warning::curl failed with exit code $CURL_EXIT while posting comment. State transition already applied — this is non-fatal."
+          elif [ "$HTTP_STATUS" != "200" ]; then
             echo "::warning::Failed to post comment to ADO work item (HTTP $HTTP_STATUS). State transition already applied — this is non-fatal."
             echo "::warning::Response: $HTTP_BODY"
           else
