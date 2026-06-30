@@ -110,6 +110,26 @@ jobs:
           echo "ADO_PROJECT=${{ vars.ADO_PROJECT }}"
 
       # ----------------------------------------------------------
+      # TEMP DEBUG: minimal raw curl call with verbose output
+      # ----------------------------------------------------------
+      - name: Debug raw curl call
+        env:
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
+        run: |
+          curl --version
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
+          echo "AUTH header length: ${#AUTH}"
+          ITEM_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
+          curl -v \
+            --request GET \
+            --url "$ITEM_URL" \
+            --header "Authorization: Basic ${AUTH}" \
+            --header "Accept: application/json" || echo "curl exit code: $?"
+
+      # ----------------------------------------------------------
       # 3. Verify the work item exists and is reachable before
       #    attempting to patch it. Surfaces auth and ID problems
       #    with a clear error rather than a cryptic patch failure.
