@@ -93,7 +93,6 @@ namespace StationAI.Adapters.Inbound
                 {
                     await _stationDirectiveRepository.SaveRules(AriaIdentity.NoStationDirectiveFallback);
                     
-                    // Clear stale targets that no longer correspond to the reset directive
                     try
                     {
                         var targetRepo = _serviceProvider.GetRequiredService<IDirectiveTargetRepository>();
