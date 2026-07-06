@@ -61,7 +61,7 @@ export function useStationDirective(): UseStationDirective {
       const res = await fetch(`${BASE}/api/stationdirective`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(directive),
+        body: JSON.stringify({ directive }),
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       setSaveSuccess(true)

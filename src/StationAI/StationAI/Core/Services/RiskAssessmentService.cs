@@ -10,17 +10,20 @@ namespace StationAI.Core.Services
         private readonly ILargeLanguageModelService _llmService;
         private readonly IStationDirectiveRepository _rulesRepository;
         private readonly ILoreRepository _loreRepository;
+        private readonly IDirectiveTargetRepository _directiveTargetRepository;
         private readonly ILogger<RiskAssessmentService> _logger;
 
         public RiskAssessmentService(
             ILargeLanguageModelService llmService,
             IStationDirectiveRepository rulesRepository,
             ILoreRepository loreRepository,
+            IDirectiveTargetRepository directiveTargetRepository,
             ILogger<RiskAssessmentService> logger)
         {
             _llmService = llmService;
             _rulesRepository = rulesRepository;
             _loreRepository = loreRepository;
+            _directiveTargetRepository = directiveTargetRepository;
             _logger = logger;
         }
 
@@ -31,7 +34,7 @@ namespace StationAI.Core.Services
             string loreIntel = await BuildLoreContextAsync(manifest);
 
             string prompt = BuildPrompt(stationDirective, manifestJson, loreIntel);
-
+            _logger.LogInformation($"Attempting the following prompt:\n{prompt}");
             var assessment = await TryAssessOnce(prompt) ?? await TryAssessOnce(prompt);
 
             return assessment ?? throw new InvalidOperationException(
@@ -73,9 +76,10 @@ namespace StationAI.Core.Services
                 {stationDirective}
                 ------------------------------------------
 
-                [PART 3: UNIVERSE INTEL]
-                The following data is universe intel that may or may not be connected with this manifest. This list was retreived 
-                because of semantic simularity. It may include items that in reality have no connection to the ship manifest. 
+                [PART 3: ARIA INTELLIGENCE DATABASE]
+                The following data is universe intel that may or may not be connected with this manifest. This list was retrieved 
+                because of semantic similarity — both to the manifest contents and to named targets from the current station directive. 
+                It may include items that in reality have no connection to the ship manifest. 
                 Verify if there is a connection and only incorporate it into your assessment if there is a clear and logical 
                 association.
                 ------------------------------------------
@@ -106,35 +110,27 @@ namespace StationAI.Core.Services
 
         private async Task<string> BuildLoreContextAsync(ShipManifest manifest)
         {
-            IEnumerable<LoreEntry> results;
-            try
-            {
-                var query = $"{manifest.CaptainName} {manifest.ShipName} {manifest.Callsign} " +
-                            $"{string.Join(" ", manifest.CargoItems)} " +
-                            $"{string.Join(" ", manifest.Passengers)}";
+            var manifestSearchTask = SearchByManifestAsync(manifest);
+            var directiveSearchTask = SearchByDirectiveTargetsAsync();
 
-                results = await _loreRepository.SearchAsync(query, topK: 5);
-            }
-            catch (Exception ex)
+            await Task.WhenAll(manifestSearchTask, directiveSearchTask);
+
+            // Deduplicate by Id; manifest results take precedence in ordering.
+            var seen = new HashSet<int>();
+            var combined = new List<LoreEntry>();
+
+            foreach (var entry in manifestSearchTask.Result.Concat(directiveSearchTask.Result))
             {
-                _logger.LogWarning(ex,
-                    "Lore retrieval failed for manifest {Callsign}; proceeding with no universe intel.",
-                    manifest.Callsign);
-                return string.Empty;
+                if (seen.Add(entry.Id))
+                    combined.Add(entry);
             }
 
-            if (!results.Any())
-            {
+            if (combined.Count == 0)
                 return string.Empty;
-            }
 
             var sb = new StringBuilder();
-            sb.AppendLine("--- ARIA INTELLIGENCE DATABASE ---");
-            sb.AppendLine("The following lore was retrieved based on semantic similarity to this manifest.");
-            sb.AppendLine("Verify relevance before incorporating into your assessment. Do not assume a match.");
-            sb.AppendLine();
 
-            foreach (var entry in results)
+            foreach (var entry in combined)
             {
                 sb.AppendLine($"[{entry.Category.ToUpper()}] {entry.Title}");
                 sb.AppendLine(entry.Body);
@@ -142,6 +138,63 @@ namespace StationAI.Core.Services
             }
 
             return sb.ToString();
+        }
+
+        private async Task<IEnumerable<LoreEntry>> SearchByManifestAsync(ShipManifest manifest)
+        {
+            try
+            {
+                var query = $"{manifest.CaptainName} {manifest.ShipName} {manifest.Callsign} " +
+                            $"{string.Join(" ", manifest.CargoItems)} " +
+                            $"{string.Join(" ", manifest.Passengers)}";
+
+                return await _loreRepository.SearchAsync(query, topK: 5);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Manifest lore search failed for callsign {Callsign}; proceeding without manifest-based universe intel.",
+                    manifest.Callsign);
+                return [];
+            }
+        }
+
+        private async Task<IEnumerable<LoreEntry>> SearchByDirectiveTargetsAsync()
+        {
+            IReadOnlyList<DirectiveTarget> targets;
+            try
+            {
+                targets = await _directiveTargetRepository.GetTargetsAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to retrieve directive targets; proceeding without directive-based universe intel.");
+                return [];
+            }
+
+            if (targets.Count == 0)
+                return [];
+
+            var searches = targets.Select(t => SearchOneLoreTargetAsync(t));
+            var results = await Task.WhenAll(searches);
+
+            return results.SelectMany(r => r);
+        }
+
+        private async Task<IEnumerable<LoreEntry>> SearchOneLoreTargetAsync(DirectiveTarget target)
+        {
+            try
+            {
+                return await _loreRepository.SearchAsync(target.Target, topK: 3);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Lore search failed for directive target '{Target}' (type: {Type}); skipping.",
+                    target.Target, target.Type);
+                return [];
+            }
         }
     }
 }

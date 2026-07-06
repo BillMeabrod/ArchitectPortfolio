@@ -34,6 +34,7 @@ public class ShipManifestFunction
             }
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
+            _logger.LogInformation($"Completed Assessment: {assessment}");
             _logger.LogInformation("Starting queue publish for {Callsign}", manifest.Callsign);
             await _queuePublisher.PublishAsync(assessment, manifest);
             _logger.LogInformation("Queue publish complete for {Callsign}", manifest.Callsign);
