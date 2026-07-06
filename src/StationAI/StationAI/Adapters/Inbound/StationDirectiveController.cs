@@ -92,6 +92,18 @@ namespace StationAI.Adapters.Inbound
                 if (result.Inappropriate)
                 {
                     await _stationDirectiveRepository.SaveRules(AriaIdentity.NoStationDirectiveFallback);
+                    
+                    // Clear stale targets that no longer correspond to the reset directive
+                    try
+                    {
+                        var targetRepo = _serviceProvider.GetRequiredService<IDirectiveTargetRepository>();
+                        await targetRepo.SaveTargetsAsync([]);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to clear directive targets after moderation rejection.");
+                    }
+                    
                     return true;
                 }
 

@@ -23,9 +23,14 @@ public class QdrantLoreAdapter : ILoreRepository
         _collectionName = collectionName;
 
         var uri = new Uri(qdrantUrl);
+        var isHttps = uri.Scheme == "https";
+        var defaultPort = isHttps ? 443 : 80;
+        var port = uri.Port > 0 && uri.Port != defaultPort ? uri.Port : defaultPort;
+        
         _qdrant = new QdrantClient(
             host: uri.Host,
-            https: true,
+            port: port,
+            https: isHttps,
             apiKey: qdrantApiKey
         );
     }
@@ -72,7 +77,8 @@ public class QdrantLoreAdapter : ILoreRepository
             cmd.Parameters.AddWithValue("body", entry.Body);
 
             await using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
+            if (!await reader.ReadAsync())
+                throw new InvalidOperationException($"Lore entry with ID {entry.Id} does not exist.");
             entry.UpdatedAt = reader.GetFieldValue<DateTimeOffset>(0);
         }
 
@@ -194,13 +200,17 @@ public class QdrantLoreAdapter : ILoreRepository
             return connectionString; // already key-value format
 
         var uri = new Uri(connectionString);
-        var userInfo = uri.UserInfo.Split(':');
+        var username = Uri.UnescapeDataString(uri.UserInfo.Split(':')[0]);
+        var password = uri.UserInfo.Contains(':') 
+            ? Uri.UnescapeDataString(uri.UserInfo.Substring(uri.UserInfo.IndexOf(':') + 1))
+            : "";
+        
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
         {
             Host = uri.Host,
             Port = uri.Port > 0 ? uri.Port : 5432,
-            Username = userInfo[0],
-            Password = userInfo.Length > 1 ? userInfo[1] : "",
+            Username = username,
+            Password = password,
             Database = uri.AbsolutePath.TrimStart('/'),
             SslMode = Npgsql.SslMode.Require
         };

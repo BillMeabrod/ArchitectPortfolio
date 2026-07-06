@@ -34,7 +34,11 @@ namespace StationAI.Core.Services
             string loreIntel = await BuildLoreContextAsync(manifest);
 
             string prompt = BuildPrompt(stationDirective, manifestJson, loreIntel);
-            _logger.LogInformation($"Attempting the following prompt:\n{prompt}");
+            _logger.LogInformation(
+                "Assessing risk for manifest {Callsign} with directive length {DirectiveLength} and {LoreEntryCount} lore entries",
+                manifest.Callsign,
+                stationDirective.Length,
+                loreIntel.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
             var assessment = await TryAssessOnce(prompt) ?? await TryAssessOnce(prompt);
 
             return assessment ?? throw new InvalidOperationException(
