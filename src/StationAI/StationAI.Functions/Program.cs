@@ -26,7 +26,7 @@ var host = new HostBuilder()
 
         services.AddScoped<RiskAssessmentService>();
         services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
-        services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
+        services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>();
         services.AddSingleton<IEmbeddingService, GoogleEmbeddingAdapter>();
         services.AddSingleton<ILoreRepository>(sp =>
             new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, qdrantCollection,

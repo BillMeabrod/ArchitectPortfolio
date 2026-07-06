@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
 using StationAI.Adapters.Outbound;
 using StationAI.Core.Interfaces;
+using StationAI.Core.Services;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +34,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("UniverseRulesSave", limiterOptions =>
+    options.AddFixedWindowLimiter("StationDirectiveSave", limiterOptions =>
     {
         limiterOptions.PermitLimit = 5;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
@@ -64,8 +65,10 @@ var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStora
     ?? throw new InvalidOperationException("BlobStorageConnection connection string is not set. Fix your configuration.");
 
 builder.Services.AddSingleton(new BlobServiceClient(blobStorageConnection));
-builder.Services.AddScoped<IRulesRepository, RulesBlobStorageAdapter>();
+builder.Services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>();
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
+builder.Services.AddScoped<IDirectiveParsingService, DirectiveParsingService>();
+builder.Services.AddScoped<IDirectiveTargetRepository, DirectiveTargetBlobStorageAdapter>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

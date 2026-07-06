@@ -2,13 +2,13 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 
 const BASE = import.meta.env.VITE_AI_API_URL as string
 
-interface UniverseRules {
+interface StationDirective {
   coreDirective: string
-  universeIntel: string
+  stationDirective: string
 }
 
-interface UseUniverseRules {
-  data: UniverseRules | null
+interface UseStationDirective {
+  data: StationDirective | null
   loading: boolean
   slow: boolean
   fetchError: string | null
@@ -16,11 +16,11 @@ interface UseUniverseRules {
   saveError: string | null
   saveSuccess: boolean
   reload: () => void
-  save: (intel: string) => Promise<void>
+  save: (directive: string) => Promise<void>
 }
 
-export function useUniverseRules(): UseUniverseRules {
-  const [data, setData] = useState<UniverseRules | null>(null)
+export function useStationDirective(): UseStationDirective {
+  const [data, setData] = useState<StationDirective | null>(null)
   const [loading, setLoading] = useState(true)
   const [slow, setSlow] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -38,12 +38,12 @@ export function useUniverseRules(): UseUniverseRules {
     slowTimer.current = setTimeout(() => setSlow(true), 5000)
 
     try {
-      const res = await fetch(`${BASE}/api/universerules`)
+      const res = await fetch(`${BASE}/api/stationdirective`)
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
-      const json: UniverseRules = await res.json()
+      const json: StationDirective = await res.json()
       setData(json)
     } catch (e) {
-      setFetchError(e instanceof Error ? e.message : 'Failed to load rules')
+      setFetchError(e instanceof Error ? e.message : 'Failed to load station directive')
     } finally {
       if (slowTimer.current) clearTimeout(slowTimer.current)
       setLoading(false)
@@ -53,15 +53,15 @@ export function useUniverseRules(): UseUniverseRules {
 
   useEffect(() => { load() }, [load])
 
-  const save = useCallback(async (intel: string) => {
+  const save = useCallback(async (directive: string) => {
     setSaveLoading(true)
     setSaveError(null)
     setSaveSuccess(false)
     try {
-      const res = await fetch(`${BASE}/api/universerules`, {
+      const res = await fetch(`${BASE}/api/stationdirective`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(intel),
+        body: JSON.stringify(directive),
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       setSaveSuccess(true)

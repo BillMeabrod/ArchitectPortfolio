@@ -28,7 +28,7 @@ namespace StationAI.Adapters.Outbound
             var config = new GenerateContentConfig
             {
                 ResponseMimeType = "application/json",
-                ResponseSchema = GenerateSchemaFromType(targetSchemaType)
+                ResponseSchema = BuildSchema(targetSchemaType)
             };
 
             try
@@ -52,7 +52,21 @@ namespace StationAI.Adapters.Outbound
                 _ => false
             };
 
-        private Schema GenerateSchemaFromType(System.Type type)
+        private static Schema BuildSchema(System.Type type)
+        {
+            if (IsObjectList(type, out var elementType))
+            {
+                return new Schema
+                {
+                    Type = Type.Array,
+                    Items = BuildObjectSchema(elementType)
+                };
+            }
+
+            return BuildObjectSchema(type);
+        }
+
+        private static Schema BuildObjectSchema(System.Type type)
         {
             var properties = new Dictionary<string, Schema>();
             var requiredFields = new List<string>();
@@ -86,6 +100,23 @@ namespace StationAI.Adapters.Outbound
                 Properties = properties,
                 Required = requiredFields
             };
+        }
+
+        private static bool IsObjectList(System.Type type, out System.Type elementType)
+        {
+            elementType = typeof(object);
+
+            if (type.IsGenericType)
+            {
+                var def = type.GetGenericTypeDefinition();
+                if (def == typeof(List<>) || def == typeof(IEnumerable<>) || def == typeof(IReadOnlyList<>))
+                {
+                    elementType = type.GetGenericArguments()[0];
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

@@ -21,7 +21,7 @@ namespace StationAI.Core
             measures are sufficient to mitigate the risk then they should always be preferred.
             """;
 
-        public const string NoUniverseIntelFallback = "No current intel on the state of the universe is available.";
+        public const string NoStationDirectiveFallback = "No current station directive is available.";
 
         public const string ContentModerationGuidelines = """
             Content moderation guidelines:
