@@ -1,0 +1,306 @@
+# ============================================================
+# Azure DevOps Kanban Sync
+#
+# Automatically updates Azure DevOps work item state based on
+# PR lifecycle events in GitHub.
+#
+# BRANCH NAMING CONVENTION (required):
+#   feature/123-short-description
+#   bugfix/456-fix-something
+#   hotfix/789-critical-patch
+#
+#   The number is the ADO work item ID.
+#
+# STATE MACHINE:
+#   PR opened / reopened / ready_for_review  →  Doing
+#   PR converted to draft                    →  Doing
+#   PR closed (merged)                       →  Done
+#   PR closed (without merge)                →  To Do
+#
+# These map to the default ADO Basic process column names.
+# If your team uses the Agile process instead, update the
+# state names in the "Determine target ADO state" step to:
+#   Doing  → Active
+#   Done   → Closed
+#   To Do  → New
+#
+# REQUIRED CONFIGURATION:
+#   Repo Settings → Secrets and variables → Actions
+#
+#   Variables tab (not secrets — these aren't sensitive):
+#     ADO_ORG_URL   — e.g. https://dev.azure.com/yourorg
+#     ADO_PROJECT   — your ADO project name (spaces are fine)
+#
+#   Secrets tab (this one IS sensitive):
+#     ADO_PAT       — Personal Access Token with Work Items (Read & Write) scope
+#                     Generate at: dev.azure.com → User Settings → Personal Access Tokens
+# ============================================================
+
+name: Azure DevOps Kanban Sync
+
+on:
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+      - converted_to_draft
+      - ready_for_review
+
+jobs:
+  sync-ado:
+    name: Update ADO Work Item State
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------------------------------------
+      # 1. Extract the ADO work item ID from the branch name.
+      #    Expected format: <type>/123-optional-description
+      #    The leading number after the slash is the work item ID.
+      #    Fails loudly if no ID is found — no silent no-ops.
+      # ----------------------------------------------------------
+      - name: Extract ADO work item ID from branch name
+        id: extract_id
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          echo "Branch: $BRANCH"
+
+          # Match the first integer segment after the branch prefix slash
+          WORK_ITEM_ID=$(echo "$BRANCH" | grep -oE '[0-9]+' | head -n1)
+
+          if [ -z "$WORK_ITEM_ID" ]; then
+            echo "::error::No work item ID found in branch name '$BRANCH'."
+            echo "::error::Branch must include a numeric work item ID (e.g. feature/123-my-feature)."
+            exit 1
+          fi
+
+          echo "Found ADO work item ID: $WORK_ITEM_ID"
+          echo "work_item_id=$WORK_ITEM_ID" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------
+      # 2. Determine the target ADO state based on the PR event.
+      #    ADO state is set directly by name — no transition ID
+      #    resolution needed unlike Jira.
+      # ----------------------------------------------------------
+      - name: Determine target ADO state
+        id: determine_state
+        run: |
+          EVENT="${{ github.event.action }}"
+          MERGED="${{ github.event.pull_request.merged }}"
+
+          if [ "$EVENT" = "closed" ] && [ "$MERGED" = "true" ]; then
+            TARGET_STATE="Done"
+          elif [ "$EVENT" = "closed" ] && [ "$MERGED" = "false" ]; then
+            TARGET_STATE="To Do"
+          else
+            # opened, reopened, converted_to_draft, ready_for_review
+            TARGET_STATE="Doing"
+          fi
+
+          echo "PR event '$EVENT' (merged=$MERGED) → targeting ADO state: $TARGET_STATE"
+          echo "target_state=$TARGET_STATE" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------
+      # 3. Verify the work item exists and is reachable before
+      #    attempting to patch it. Surfaces auth and ID problems
+      #    with a clear error rather than a cryptic patch failure.
+      # ----------------------------------------------------------
+      - name: Verify work item exists
+        id: verify_item
+        env:
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
+        run: |
+          # ADO REST API uses Basic auth with a PAT — username is empty, PAT is the password
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
+
+          ITEM_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
+
+          echo "Verifying work item $WORK_ITEM_ID at $ITEM_URL"
+
+          # Write the response body to a temp file and capture the status code
+          # separately. This avoids fragile string-parsing of a combined
+          # --write-out payload, which proved unreliable on this runner image.
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
+            --request GET \
+            --url "$ITEM_URL" \
+            --header "Authorization: Basic ${AUTH}" \
+            --header "Accept: application/json")
+          CURL_EXIT=$?
+
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::error::curl failed with exit code $CURL_EXIT while contacting ADO."
+            echo "::error::This usually means a network issue or a malformed URL."
+            cat "$BODY_FILE"
+            exit 1
+          fi
+
+          HTTP_BODY=$(cat "$BODY_FILE")
+          rm -f "$BODY_FILE"
+
+          if [ "$HTTP_STATUS" = "401" ]; then
+            echo "::error::ADO returned 401 Unauthorized."
+            echo "::error::Check that ADO_PAT is valid and has Work Items (Read & Write) scope."
+            exit 1
+          fi
+
+          if [ "$HTTP_STATUS" = "404" ]; then
+            echo "::error::Work item $WORK_ITEM_ID not found in project '${ADO_PROJECT}'."
+            echo "::error::Check that the work item ID in the branch name is correct."
+            exit 1
+          fi
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::ADO API returned unexpected HTTP $HTTP_STATUS."
+            echo "::error::Response: $HTTP_BODY"
+            exit 1
+          fi
+
+          # Extract the work item title for logging
+          ITEM_TITLE=$(echo "$HTTP_BODY" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          print(data.get('fields', {}).get('System.Title', '(unknown)'))
+          ")
+
+          echo "Confirmed work item: [$WORK_ITEM_ID] $ITEM_TITLE"
+          echo "item_title=$ITEM_TITLE" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------
+      # 4. PATCH the work item state.
+      #    ADO uses JSON Patch (RFC 6902) — we replace the
+      #    System.State field directly by name. No transition
+      #    ID lookup required.
+      # ----------------------------------------------------------
+      - name: Update ADO work item state
+        id: update_state
+        env:
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
+          TARGET_STATE: ${{ steps.determine_state.outputs.target_state }}
+        run: |
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
+
+          PATCH_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}?api-version=7.1"
+
+          # JSON Patch document — op: replace on the state field
+          PATCH_BODY=$(python3 -c "
+          import json
+          patch = [
+              {
+                  'op': 'replace',
+                  'path': '/fields/System.State',
+                  'value': '${TARGET_STATE}'
+              }
+          ]
+          print(json.dumps(patch))
+          ")
+
+          echo "Patching work item $WORK_ITEM_ID → state: $TARGET_STATE"
+
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
+            --request PATCH \
+            --url "$PATCH_URL" \
+            --header "Authorization: Basic ${AUTH}" \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json-patch+json" \
+            --data "$PATCH_BODY")
+          CURL_EXIT=$?
+
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::error::curl failed with exit code $CURL_EXIT while patching ADO work item."
+            cat "$BODY_FILE"
+            exit 1
+          fi
+
+          HTTP_BODY=$(cat "$BODY_FILE")
+          rm -f "$BODY_FILE"
+
+          if [ "$HTTP_STATUS" = "400" ]; then
+            echo "::error::ADO rejected the state transition (HTTP 400)."
+            echo "::error::The state '$TARGET_STATE' may not be valid for this work item type,"
+            echo "::error::or the transition is not allowed from the current state."
+            echo "::error::Response: $HTTP_BODY"
+            echo "::error::If your team uses the Agile process template, update state names in"
+            echo "::error::the 'Determine target ADO state' step: Doing→Active, Done→Closed, To Do→New"
+            exit 1
+          fi
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::ADO PATCH returned unexpected HTTP $HTTP_STATUS."
+            echo "::error::Response: $HTTP_BODY"
+            exit 1
+          fi
+
+          echo "✓ Work item $WORK_ITEM_ID successfully transitioned to '$TARGET_STATE'."
+
+      # ----------------------------------------------------------
+      # 5. Add a comment to the ADO work item linking back to
+      #    the GitHub PR. Creates a two-way trace between the
+      #    board and the code change.
+      #    Non-fatal — state is already updated if this fails.
+      # ----------------------------------------------------------
+      - name: Comment on ADO work item with PR link
+        env:
+          ADO_ORG_URL: ${{ vars.ADO_ORG_URL }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          WORK_ITEM_ID: ${{ steps.extract_id.outputs.work_item_id }}
+          TARGET_STATE: ${{ steps.determine_state.outputs.target_state }}
+          ITEM_TITLE: ${{ steps.verify_item.outputs.item_title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_ACTOR: ${{ github.actor }}
+        run: |
+          AUTH=$(printf ":%s" "$ADO_PAT" | base64 -w0)
+
+          COMMENT_URL="${ADO_ORG_URL}/${ADO_PROJECT}/_apis/wit/workitems/${WORK_ITEM_ID}/comments?api-version=7.1-preview.3"
+
+          if [ "$PR_ACTION" = "closed" ] && [ "$PR_MERGED" = "true" ]; then
+            EVENT_DESC="merged"
+          elif [ "$PR_ACTION" = "closed" ] && [ "$PR_MERGED" = "false" ]; then
+            EVENT_DESC="closed without merging"
+          else
+            EVENT_DESC="$PR_ACTION"
+          fi
+
+          # ADO comments accept HTML
+          COMMENT_BODY=$(python3 -c "
+          import json
+          html = (
+              '<p>PR <strong>${EVENT_DESC}</strong> by ${PR_ACTOR}:</p>'
+              '<p><a href=\"${PR_URL}\">${PR_TITLE}</a></p>'
+              '<p>Work item state automatically updated to <strong>${TARGET_STATE}</strong> by CI/CD pipeline.</p>'
+          )
+          print(json.dumps({'text': html}))
+          ")
+
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl --silent --output "$BODY_FILE" --write-out "%{http_code}" \
+            --request POST \
+            --url "$COMMENT_URL" \
+            --header "Authorization: Basic ${AUTH}" \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --data "$COMMENT_BODY")
+          CURL_EXIT=$?
+
+          HTTP_BODY=$(cat "$BODY_FILE" 2>/dev/null || echo "")
+          rm -f "$BODY_FILE"
+
+          if [ $CURL_EXIT -ne 0 ]; then
+            echo "::warning::curl failed with exit code $CURL_EXIT while posting comment. State transition already applied — this is non-fatal."
+          elif [ "$HTTP_STATUS" != "200" ]; then
+            echo "::warning::Failed to post comment to ADO work item (HTTP $HTTP_STATUS). State transition already applied — this is non-fatal."
+            echo "::warning::Response: $HTTP_BODY"
+          else
+            echo "✓ Comment posted to work item $WORK_ITEM_ID."
+          fi

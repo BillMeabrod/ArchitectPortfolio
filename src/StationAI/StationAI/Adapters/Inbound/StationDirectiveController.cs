@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Qdrant.Client.Grpc;
 using StationAI.Core;
 using StationAI.Core.Interfaces;
 using System.ComponentModel.DataAnnotations;
