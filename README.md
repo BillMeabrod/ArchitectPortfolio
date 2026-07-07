@@ -2,9 +2,9 @@
 
 A multi-service, cloud-native portfolio project demonstrating senior-level knowledge of software architecture patterns, inter-service communication, and Azure infrastructure. The project is themed around a science fiction space station called **Meabrod Station**, where incoming ships are logged, assessed for risk by an onboard AI, triaged by specialist crew, and the whole process is observable through a unified dashboard.
 
-each backend application is deliberately built using a different architectural pattern and, where appropriate, a different technology stack. The goal is to demonstrate that architectural decisions are driven by the problem at hand rather than personal habit.
+Each backend application is deliberately built using a different architectural pattern and, where appropriate, a different technology stack. The goal is to demonstrate that architectural decisions are driven by the problem at hand rather than personal habit.
 
-\---
+---
 
 ## At a Glance
 
@@ -15,7 +15,7 @@ each backend application is deliberately built using a different architectural p
 * 🔗 **Event-driven and fully decoupled.** No service knows the others exist. Everything talks through queues.
 * ☁️ **Live on Azure right now.** Not a screenshot. [Click it.](https://agreeable-moss-0ff2e0510.7.azurestaticapps.net)
 
-\---
+---
 
 ## Live
 
@@ -25,7 +25,7 @@ Every backend runs on free or low-cost Azure tiers, which means a real cold star
 
 This infrastructure is sized for portfolio review, not sustained traffic. If the demo is unresponsive, the most likely cause is a free-tier quota being exhausted rather than the app being broken.
 
-\---
+---
 
 ## The Big Picture
 
@@ -57,7 +57,7 @@ Azure App Service (F1)       Azure App Service              Azure App Service (F
 
 Ships arrive at the station, their manifests are logged by App 1, ARIA, the station's onboard AI assesses risk in App 2, and specialist crew are notified for triage in App 3. All three backend apps communicate asynchronously via Azure Storage Queues, and none of them know about each other directly. App 4 is a dashboard that talks to all three backend APIs directly, giving a single place to submit manifests, tune ARIA's behavior, and work the triage queues.
 
-\---
+---
 
 ## App 1: StationShipManifestLogger
 
@@ -81,7 +81,7 @@ App 1 has a single responsibility with minimal business logic. Vertical Slice is
 
 **SQLite in production** was a deliberate cost-driven decision. Azure SQL Serverless, while serverless, still accrues compute costs during active development. For an audit log that no one queries directly through a UI, SQLite on the App Service `/home/` persistent storage is a perfectly adequate and zero-cost alternative. The tradeoff (no concurrent write safety, no cloud-native HA) is acceptable at portfolio scale, and would be a clear upgrade path in a production system.
 
-\---
+---
 
 ## App 2: StationAI
 
@@ -103,14 +103,14 @@ Hexagonal Architecture (also known as Ports and Adapters) is chosen when the pri
 
 Google Gemini is used today because it offers a free tier sufficient for portfolio traffic. The primary model is `gemini-3.1-flash-lite`, with `gemini-2.5-flash-lite` as a fallback for transient failures (rate limits, server errors, timeouts). If Gemini removes the free tier, changes its API, or a better option emerges, the only change required is writing a new outbound adapter that implements `ILargeLanguageModelService`. The core, the rules repository, the queue publisher, and every inbound adapter remain completely untouched. The architecture makes the swap a single-file change by design.
 
-The same principle applies to rules storage. Rules are stored as a plain text blob in Azure Blob Storage, which is a simple and zero-cost solution for a single overwritable string. If the requirements evolved to support versioned rule history or multi-tenant rules, the `IRulesRepository` interface stays the same, and only the adapter changes.
+The same principle applies to rules storage. Rules are stored as a plain text blob in Azure Blob Storage, which is a simple and zero-cost solution for a single overwritable string. If the requirements evolved to support versioned rule history or multi-tenant rules, the `IStationDirectiveRepository` interface stays the same, and only the adapter changes.
 
 ### Ports and Adapters structure
 
 **Core** (business logic, no external dependencies):
 
 * `ILargeLanguageModelService`: outbound port for LLM calls
-* `IRulesRepository`: outbound port for rules persistence
+* `IStationDirectiveRepository`: outbound port for rules persistence
 * `RiskAssessmentService`: assembles the prompt, calls the LLM, and validates the response, including a single retry if the result is malformed or contains out-of-range values
 * `RiskAssessment`, `ShipManifest`: core domain models
 * `AriaIdentity`: holds ARIA's fixed core directive and shared fallback text as constants, referenced by both the prompt builder and the rules API so they stay in sync with a single source of truth
@@ -118,11 +118,11 @@ The same principle applies to rules storage. Rules are stored as a plain text bl
 **Outbound Adapters** (the core calls these):
 
 * `GeminiAdapter`: implements `ILargeLanguageModelService`, calls Google Gemini API with a range-constrained response schema, generated via reflection from the `RiskAssessment` type's validation attributes, and falls back to a backup model on transient failures
-* `RulesBlobStorageAdapter`: implements `IRulesRepository`, reads and writes a single blob in Azure Blob Storage
+* `StationDirectiveBlobStorageAdapter`: implements `IStationDirectiveRepository`, reads and writes a single blob in Azure Blob Storage
 
 **Inbound Adapters** (these call the core):
 
-* `UniverseRulesController`: HTTP endpoints for GET/PUT on the current rules, also exposing ARIA's fixed core directive for read-only inspection
+* `StationDirectiveController`: HTTP endpoints for GET/PUT on the current rules, also exposing ARIA's fixed core directive for read-only inspection
 * `ShipManifestFunction`: Azure Queue trigger that deserializes the manifest, calls `RiskAssessmentService`, and publishes the result
 * `RiskAssessmentQueuePublisher`: publishes the completed assessment to `risk-assessment-queue`
 
@@ -140,9 +140,9 @@ This structure ensures that the output contract (the JSON shape that App 3 depen
 
 ### Validation, end to end
 
-Hazard level scores are constrained at three independent layers, not just one. The Gemini request schema itself declares a minimum and maximum for each score, generated automatically from `\\\[Range(0, 10)]` attributes on the `RiskAssessment` model. If Gemini still returns an out-of-range or malformed value despite the constrained schema (a real possibility, since structured output guarantees syntax, not semantics), `RiskAssessmentService` validates the result and retries once before failing loudly. Finally, Postgres itself enforces the same 0-10 range via `CheckConstraint`s on the `triage\\\_shipassessment` table, so the constraint holds regardless of which process writes to that table.
+Hazard level scores are constrained at three independent layers, not just one. The Gemini request schema itself declares a minimum and maximum for each score, generated automatically from `[Range(0, 10)]` attributes on the `RiskAssessment` model. If Gemini still returns an out-of-range or malformed value despite the constrained schema (a real possibility, since structured output guarantees syntax, not semantics), `RiskAssessmentService` validates the result and retries once before failing loudly. Finally, Postgres itself enforces the same 0-10 range via `CheckConstraint`s on the `triage_shipassessment` table, so the constraint holds regardless of which process writes to that table.
 
-\---
+---
 
 ## App 3: StationTriage
 
@@ -154,7 +154,7 @@ Hazard level scores are constrained at three independent layers, not just one. T
 
 App 3 is the station's triage system. It has two entry points.
 
-A **Django web app** that exposes role-based queue views, security, medical, and hazmat, each showing only the ships relevant to that specialist team, filtered by the corresponding hazard score and excluding already-resolved assessments. Each queue has a detail endpoint that returns the full assessment (recommendation, cargo manifest, passenger list) and accepts status updates as the ship moves through `NEW → IN\\\_PROGRESS → RESOLVED`.
+A **Django web app** that exposes role-based queue views, security, medical, and hazmat, each showing only the ships relevant to that specialist team, filtered by the corresponding hazard score and excluding already-resolved assessments. Each queue has a detail endpoint that returns the full assessment (recommendation, cargo manifest, passenger list) and accepts status updates as the ship moves through `NEW → IN_PROGRESS → RESOLVED`.
 
 A standalone **Azure Function** that triggers on messages arriving in `risk-assessment-queue`, and inserts the combined manifest and risk assessment into Postgres as a new `ShipAssessment` row, ready for the queue views to pick up.
 
@@ -166,13 +166,13 @@ Django is the natural choice once Python is the language. It's the standard, wid
 
 ### Key design decisions
 
-**The Azure Function is deliberately framework-free.** Although the web app uses Django's ORM, the Function does not import Django at all. It writes directly to Postgres via `psycopg2`. Early iterations attempted to share Django's `ShipAssessment` model between the web app and the Function, which created a real deployment coupling problem: the Function's deployment package needed to include the entire Django project tree to satisfy `INSTALLED\\\_APPS`, and any change to the web app's dependencies broke the Function's ability to start, since it loaded the same `INSTALLED\\\_APPS` list regardless of whether it actually used those apps. Decoupling the Function into a standalone script with its own minimal dependency list (`azure-functions`, `psycopg2-binary`) eliminated this coupling entirely. The Function now has an honest, accurate dependency list, and the two processes evolve independently.
+**The Azure Function is deliberately framework-free.** Although the web app uses Django's ORM, the Function does not import Django at all. It writes directly to Postgres via `psycopg2`. Early iterations attempted to share Django's `ShipAssessment` model between the web app and the Function, which created a real deployment coupling problem: the Function's deployment package needed to include the entire Django project tree to satisfy `INSTALLED_APPS`, and any change to the web app's dependencies broke the Function's ability to start, since it loaded the same `INSTALLED_APPS` list regardless of whether it actually used those apps. Decoupling the Function into a standalone script with its own minimal dependency list (`azure-functions`, `psycopg2-binary`) eliminated this coupling entirely. The Function now has an honest, accurate dependency list, and the two processes evolve independently.
 
 **Postgres over SQLite for this app specifically**, unlike App 1's SQLite choice. App 3's data is genuinely queried and filtered in different ways by three different consumers (the three role-based queues), and is written by two separate processes (the web app and the Function) that may run as multiple instances. SQLite's lack of robust concurrent-write support made it a poor fit here, whereas App 1's audit log is single-writer and append-only. Neon's serverless Postgres free tier keeps this at zero fixed cost while providing real concurrent access.
 
-**Authentication is not currently featured on any write endpoint.** The three detail views (`security\\\_detail`, `medical\\\_detail`, `hazmat\\\_detail`) accept status updates via `@csrf\\\_exempt` POST requests, since CSRF protection is meant for session-based browser form submissions, not a JSON API consumed cross-origin by the dashboard. No replacement authentication mechanism, API key, session check, or similar, exists in its place, since no user accounts exist anywhere in this project today. This is a reasonable starting point given the project's current scope, but it is a natural next step if the triage system grows in complexity, real user accounts, role-based permissions per specialist team, and audit trails tied to a specific person would all be worth adding at that point.
+**Authentication is not currently featured on any write endpoint.** The three detail views (`security_detail`, `medical_detail`, `hazmat_detail`) accept status updates via `@csrf_exempt` POST requests, since CSRF protection is meant for session-based browser form submissions, not a JSON API consumed cross-origin by the dashboard. No replacement authentication mechanism, API key, session check, or similar, exists in its place, since no user accounts exist anywhere in this project today. This is a reasonable starting point given the project's current scope, but it is a natural next step if the triage system grows in complexity, real user accounts, role-based permissions per specialist team, and audit trails tied to a specific person would all be worth adding at that point.
 
-\---
+---
 
 ## App 4: StationDashboard
 
@@ -198,7 +198,7 @@ The same reasoning that justified Vertical Slice for App 1 applies here: a small
 
 **Stable identity for dynamic list rows.** The manifest form's cargo and passenger lists use a real, stable ID per row (generated once via `crypto.randomUUID()` at creation), not array index or row content, as the React key. This avoids the well-known class of bugs where adding, removing, or editing list items causes React to misattribute DOM state, focus, or input values between rows.
 
-\---
+---
 
 ## Inter-Service Communication: Event-Driven Architecture
 
@@ -216,7 +216,7 @@ The pattern used is **event-carried state transfer**. Each message contains the 
 
 **App 4** sits outside this event chain entirely. It does not publish or consume queue messages. It calls each backend's REST API directly, the same way any external client would.
 
-\---
+---
 
 ## Infrastructure
 
@@ -236,7 +236,7 @@ All Azure resources live in a single resource group: `SpaceStation-RG`.
 
 Infrastructure for every app is defined as code using **Bicep** (`infra/main.bicep`, `infra/station-ai.bicep`, `infra/station-triage.bicep`, `infra/station-dashboard.bicep`), demonstrating familiarity with Azure IaC tooling.
 
-\---
+---
 
 ## CI/CD
 
@@ -244,11 +244,11 @@ All four apps deploy via a single GitHub Actions workflow (`.github/workflows/de
 
 A few deliberate choices worth calling out:
 
-**The dashboard's build runs explicitly, not implicitly.** Azure Static Web Apps' deploy action can build the app itself using an internal, auto-detecting builder, but that builder does not necessarily run the project's own `package.json` build script, which meant TypeScript errors could pass through to production undetected. The pipeline now runs `npm install \\\&\\\& npm run build` (the project's real build script, including its `tsc -b` type-check gate) as its own explicit step, then deploys the already-built output with `skip\\\_app\\\_build: true`. A broken type stops the deploy, loudly, before anything ships.
+**The dashboard's build runs explicitly, not implicitly.** Azure Static Web Apps' deploy action can build the app itself using an internal, auto-detecting builder, but that builder does not necessarily run the project's own `package.json` build script, which meant TypeScript errors could pass through to production undetected. The pipeline now runs `npm install && npm run build` (the project's real build script, including its `tsc -b` type-check gate) as its own explicit step, then deploys the already-built output with `skip_app_build: true`. A broken type stops the deploy, loudly, before anything ships.
 
 **The build output is verified before it's deployed.** A short check confirms `dist/index.html` references a real compiled bundle (`/assets/...`) rather than raw source, catching a category of misconfiguration that a successful build alone cannot rule out.
 
-\---
+---
 
 ## Running Locally
 
@@ -376,7 +376,7 @@ npm run dev
 
 The `.env.example` values point at the deployed Azure APIs by default. Replace them with local URLs (for example `http://localhost:5000`) if running the backends locally too.
 
-\---
+---
 
 ## Architectural Decision Summary
 
