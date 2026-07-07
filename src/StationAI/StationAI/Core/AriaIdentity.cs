@@ -21,25 +21,27 @@ namespace StationAI.Core
             measures are sufficient to mitigate the risk then they should always be preferred.
             """;
 
-        public const string NoUniverseIntelFallback = "No current intel on the state of the universe is available.";
+        public const string NoStationDirectiveFallback = "No current station directive is available.";
 
         public const string ContentModerationGuidelines = """
             Content moderation guidelines:
 
-            Flag as inappropriate if content contains:
+            Flag as inappropriate ONLY if content contains:
             - Racist, homophobic, or any other bigoted content targeting a group of people
             - Graphic sexual content
             - Gratuitously gory or disturbing descriptions of violence
-            - Explicit promotion or endorsement of drug use
+            - Explicit promotion or glorification of drug use (e.g. "drugs are great, everyone should use them")
 
             Do NOT flag as inappropriate:
+            - Naming illegal items as cargo (e.g. "illegal drugs", "contraband") — this is a security context, listing contraband is the point
+            - Naming dangerous people or factions (e.g. "terrorists", "separatists") — threat actors are valid manifest entries
             - Adult humor or dark comedy
             - Mild violence without graphic gore
-            - Drug references that are not endorsing drug use
             - Creative, funny, or edgy content that a reasonable adult would not find genuinely offensive
             - Science fiction themes including conflict, danger, or morally complex scenarios
 
-            Be liberal, not conservative. Only flag content that would genuinely embarrass a professional if seen by a potential employer.
+            The threshold is high. Ask yourself: does this content exist to offend or harm, or does it exist to play a sci-fi security game?
+            Only flag if the answer is clearly the former.
             """;
     }
 }

@@ -1,21 +1,26 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import Layout from '../shared/Layout'
 import ColdStartNotice from '../shared/ColdStartNotice'
-import { useUniverseRules } from './useUniverseRules'
+import { useStationDirective } from './useStationDirective'
+
+const MAX_DIRECTIVE_LENGTH = 500
 
 export default function AiConsolePage() {
   const { data, loading, slow, fetchError, saveLoading, saveError, saveSuccess, reload, save } =
-    useUniverseRules()
+    useStationDirective()
 
-  const [intel, setIntel] = useState('')
+  const [directive, setDirective] = useState('')
 
   useEffect(() => {
-    if (data) setIntel(data.universeIntel)
+    if (data) setDirective(data.stationDirective)
   }, [data])
+
+  const overLimit = directive.length > MAX_DIRECTIVE_LENGTH
 
   async function handleSave(e: FormEvent) {
     e.preventDefault()
-    await save(intel)
+    if (overLimit) return
+    await save(directive)
   }
 
   const sectionHeadClass = 'text-xs font-mono font-semibold tracking-widest text-[#5dcaa5] mb-2'
@@ -33,7 +38,7 @@ export default function AiConsolePage() {
             &gt; ARIA OPERATIONAL RULE CONFIGURATION
           </h1>
           <p className="text-[#9fe1cb]/50 text-sm mt-1 font-mono">
-            Inspect ARIA&apos;s core directive and configure volatile universe intel.
+            Inspect ARIA&apos;s core directive and configure the volatile station directive.
           </p>
         </div>
 
@@ -80,34 +85,47 @@ export default function AiConsolePage() {
 
             <form onSubmit={handleSave}>
               <p className={sectionHeadClass}>
-                &gt; UNIVERSE INTEL [EDITABLE]<span className="cursor-blink">█</span>
+                &gt; STATION DIRECTIVE [EDITABLE]<span className="cursor-blink">█</span>
               </p>
               <div className={blockClass}>
                 <p className="text-xs text-[#9fe1cb]/60 font-mono mb-3">
-                  Active tactical sector updates fed into every risk assessment. Modifications take
-                  effect on the next assessment cycle.
+                  Active tactical directive fed into every risk assessment and used to surface
+                  related universe intel. Modifications take effect on the next assessment cycle.
                 </p>
                 <textarea
                   className="w-full bg-black border border-[#1d9e75]/60 rounded-[2px] px-3 py-2 text-[#5dcaa5] placeholder-[#1d9e75]/40 focus:outline-none focus:border-[#1d9e75] font-mono text-sm resize-y min-h-36"
-                  value={intel}
-                  onChange={e => setIntel(e.target.value)}
-                  placeholder="Enter sector intel…"
+                  value={directive}
+                  onChange={e => setDirective(e.target.value)}
+                  placeholder="Enter station directive…"
+                  maxLength={MAX_DIRECTIVE_LENGTH + 1}
                 />
+                <div className="mt-1 flex justify-end">
+                  <span
+                    className={`text-xs font-mono ${
+                      overLimit ? 'text-red-400' : 'text-[#9fe1cb]/40'
+                    }`}
+                  >
+                    {directive.length} / {MAX_DIRECTIVE_LENGTH}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-3 flex items-center gap-4">
                 <button
                   type="submit"
-                  disabled={saveLoading}
+                  disabled={saveLoading || overLimit}
                   className="px-5 py-2 bg-transparent border border-[#1d9e75] hover:bg-[#1d9e75]/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-[2px] font-mono font-bold text-[#5dcaa5] text-sm tracking-widest transition-colors"
                 >
-                  {saveLoading ? '[ TRANSMITTING… ]' : '[ SAVE_INTEL ]'}
+                  {saveLoading ? '[ TRANSMITTING… ]' : '[ SAVE_DIRECTIVE ]'}
                 </button>
                 {saveSuccess && (
-                  <span className="text-sm font-mono text-[#5dcaa5]">✓ Intel updated</span>
+                  <span className="text-sm font-mono text-[#5dcaa5]">✓ Directive updated</span>
                 )}
                 {saveError && (
                   <span className="text-sm font-mono text-red-400">{saveError}</span>
+                )}
+                {overLimit && (
+                  <span className="text-sm font-mono text-red-400">Exceeds {MAX_DIRECTIVE_LENGTH} character limit</span>
                 )}
               </div>
             </form>

@@ -3,7 +3,7 @@ using StationAI.Core.Interfaces;
 
 namespace StationAI.Adapters.Outbound
 {
-    public class RulesBlobStorageAdapter : IRulesRepository
+    public class RulesBlobStorageAdapter : IStationDirectiveRepository
     {
         private readonly BlobContainerClient _containerClient;
         private readonly BlobClient _blobClient;

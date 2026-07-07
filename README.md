@@ -8,12 +8,12 @@ Each backend application is deliberately built using a different architectural p
 
 ## At a Glance
 
-- 🏗️ **4 services. 4 architectural patterns.** Vertical Slice, Hexagonal, Django MTV, feature-folder React, each chosen on purpose.
-- 🌐 **Polyglot by design.** .NET, Python, TypeScript, one engineer, real range.
-- 🤖 **AI with guardrails.** LLM output validated at three independent layers, schema, app logic, and the database itself.
-- ⚙️ **Full IaC + CI/CD.** Bicep-defined infrastructure, one pipeline, four services, zero manual deploys.
-- 🔗 **Event-driven and fully decoupled.** No service knows the others exist. Everything talks through queues.
-- ☁️ **Live on Azure right now.** Not a screenshot. [Click it.](https://agreeable-moss-0ff2e0510.7.azurestaticapps.net)
+* 🏗️ **4 services. 4 architectural patterns.** Vertical Slice, Hexagonal, Django MTV, feature-folder React, each chosen on purpose.
+* 🌐 **Polyglot by design.** .NET, Python, TypeScript, one engineer, real range.
+* 🤖 **AI with guardrails.** LLM output validated at three independent layers, schema, app logic, and the database itself.
+* ⚙️ **Full IaC + CI/CD.** Bicep-defined infrastructure, one pipeline, four services, zero manual deploys.
+* 🔗 **Event-driven and fully decoupled.** No service knows the others exist. Everything talks through queues.
+* ☁️ **Live on Azure right now.** Not a screenshot. [Click it.](https://agreeable-moss-0ff2e0510.7.azurestaticapps.net)
 
 ---
 
@@ -103,25 +103,28 @@ Hexagonal Architecture (also known as Ports and Adapters) is chosen when the pri
 
 Google Gemini is used today because it offers a free tier sufficient for portfolio traffic. The primary model is `gemini-3.1-flash-lite`, with `gemini-2.5-flash-lite` as a fallback for transient failures (rate limits, server errors, timeouts). If Gemini removes the free tier, changes its API, or a better option emerges, the only change required is writing a new outbound adapter that implements `ILargeLanguageModelService`. The core, the rules repository, the queue publisher, and every inbound adapter remain completely untouched. The architecture makes the swap a single-file change by design.
 
-The same principle applies to rules storage. Rules are stored as a plain text blob in Azure Blob Storage, which is a simple and zero-cost solution for a single overwritable string. If the requirements evolved to support versioned rule history or multi-tenant rules, the `IRulesRepository` interface stays the same, and only the adapter changes.
+The same principle applies to rules storage. Rules are stored as a plain text blob in Azure Blob Storage, which is a simple and zero-cost solution for a single overwritable string. If the requirements evolved to support versioned rule history or multi-tenant rules, the `IStationDirectiveRepository` interface stays the same, and only the adapter changes.
 
 ### Ports and Adapters structure
 
 **Core** (business logic, no external dependencies):
-- `ILargeLanguageModelService`: outbound port for LLM calls
-- `IRulesRepository`: outbound port for rules persistence
-- `RiskAssessmentService`: assembles the prompt, calls the LLM, and validates the response, including a single retry if the result is malformed or contains out-of-range values
-- `RiskAssessment`, `ShipManifest`: core domain models
-- `AriaIdentity`: holds ARIA's fixed core directive and shared fallback text as constants, referenced by both the prompt builder and the rules API so they stay in sync with a single source of truth
+
+* `ILargeLanguageModelService`: outbound port for LLM calls
+* `IStationDirectiveRepository`: outbound port for rules persistence
+* `RiskAssessmentService`: assembles the prompt, calls the LLM, and validates the response, including a single retry if the result is malformed or contains out-of-range values
+* `RiskAssessment`, `ShipManifest`: core domain models
+* `AriaIdentity`: holds ARIA's fixed core directive and shared fallback text as constants, referenced by both the prompt builder and the rules API so they stay in sync with a single source of truth
 
 **Outbound Adapters** (the core calls these):
-- `GeminiAdapter`: implements `ILargeLanguageModelService`, calls Google Gemini API with a range-constrained response schema, generated via reflection from the `RiskAssessment` type's validation attributes, and falls back to a backup model on transient failures
-- `RulesBlobStorageAdapter`: implements `IRulesRepository`, reads and writes a single blob in Azure Blob Storage
+
+* `GeminiAdapter`: implements `ILargeLanguageModelService`, calls Google Gemini API with a range-constrained response schema, generated via reflection from the `RiskAssessment` type's validation attributes, and falls back to a backup model on transient failures
+* `StationDirectiveBlobStorageAdapter`: implements `IStationDirectiveRepository`, reads and writes a single blob in Azure Blob Storage
 
 **Inbound Adapters** (these call the core):
-- `UniverseRulesController`: HTTP endpoints for GET/PUT on the current rules, also exposing ARIA's fixed core directive for read-only inspection
-- `ShipManifestFunction`: Azure Queue trigger that deserializes the manifest, calls `RiskAssessmentService`, and publishes the result
-- `RiskAssessmentQueuePublisher`: publishes the completed assessment to `risk-assessment-queue`
+
+* `StationDirectiveController`: HTTP endpoints for GET/PUT on the current rules, also exposing ARIA's fixed core directive for read-only inspection
+* `ShipManifestFunction`: Azure Queue trigger that deserializes the manifest, calls `RiskAssessmentService`, and publishes the result
+* `RiskAssessmentQueuePublisher`: publishes the completed assessment to `risk-assessment-queue`
 
 ### The prompt architecture
 
@@ -249,86 +252,151 @@ A few deliberate choices worth calling out:
 
 ## Running Locally
 
-The entire system — all five services plus their local infrastructure — runs with a single command via [.NET Aspire](https://aspire.dev). Aspire orchestrates startup ordering, injects connection strings, and surfaces every service's logs, traces, and health in one dashboard. The AppHost is a development-time concern only; it is never deployed, and no production service depends on it. In production each service is deployed independently and reads its configuration from Azure App Service settings.
-
 ### Prerequisites
 
-- .NET 10 SDK
-- Python 3.13+ (3.14 recommended to match production)
-- Node.js and npm
-- Azure Functions Core Tools v4 (`npm install -g azure-functions-core-tools@4`)
-- Docker Desktop (Aspire runs the Azurite storage emulator as a container)
-- A Google Gemini API key, available on your PATH as `GOOGLE_API_KEY`
-- A Neon (or any Postgres) connection string
+* .NET 10 SDK
+* Python 3.13+ (3.14 recommended to match production)
+* Node.js and npm
+* Azure Functions Core Tools v4
+* Azurite (Azure Storage emulator): `npm install -g azurite`
+* A Google Gemini API key
+* A Neon (or any Postgres) connection string
 
-A dedicated Neon **dev branch** is recommended so local development is fully isolated from production data. Neon branches are instant, free, and share storage copy-on-write with their parent.
-
-### One-time local configuration
-
-Three files hold local-only secrets and are gitignored. Create them before the first run.
-
-**AppHost user secrets** — the Neon dev branch URL and Qdrant key (Qdrant only applies on the RAG feature branch):
+### App 1: StationShipManifestLogger
 
 ```bash
-cd src/ArchitectPortfolio.AppHost
-dotnet user-secrets set "Parameters:neon-dev-url" "<your Neon dev branch connection string>"
+cd src/StationShipManifestLogger/StationShipManifestLogger
+dotnet run
 ```
 
-**Triage `.env`** at `src/StationTriage/station_triage/.env`:
+User secrets required:
+
+```json
+{
+  "ConnectionStrings": {
+    "AzureStorageConnection": "UseDevelopmentStorage=true"
+  }
+}
+```
+
+### App 2: StationAI (Web API)
+
+```bash
+cd src/StationAI/StationAI
+dotnet run
+```
+
+User secrets required:
+
+```json
+{
+  "ConnectionStrings": {
+    "BlobStorageConnection": "UseDevelopmentStorage=true"
+  },
+  "GOOGLE\\\_API\\\_KEY": "your-gemini-api-key"
+}
+```
+
+The deployed version supplies `GOOGLE\\\_API\\\_KEY` through an Azure App Service application setting instead.
+
+### App 2: StationAI.Functions
+
+Start Azurite first:
+
+```bash
+azurite
+```
+
+Then:
+
+```bash
+cd src/StationAI/StationAI.Functions
+func start
+```
+
+`local.settings.json` required (not committed):
+
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "BlobStorageConnection": "UseDevelopmentStorage=true",
+    "FUNCTIONS\\\_WORKER\\\_RUNTIME": "dotnet-isolated",
+    "FUNCTIONS\\\_EXTENSION\\\_VERSION": "\\\~4"
+  }
+}
+```
+
+### App 3: StationTriage (Web App)
+
+```bash
+cd src/StationTriage/station\\\_triage
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+`.env` required (not committed):
 
 ```
-DATABASE_URL=<your Neon dev branch connection string>
-DJANGO_SECRET_KEY=<any local value>
+DATABASE\\\_URL=postgresql://user:password@host/dbname
+DJANGO\\\_SECRET\\\_KEY=your-local-secret-key
 DEBUG=True
 ```
 
-**Dashboard `.env.local`** at `src/StationDashboard/.env.local`:
-
-```
-VITE_MANIFEST_API_URL=https://localhost:7244
-VITE_AI_API_URL=https://localhost:7059
-VITE_TRIAGE_API_URL=http://localhost:8080
-```
-
-### Run everything
-
-Start Docker Desktop, then from the repository root:
+### App 3: StationTriage Function
 
 ```bash
-aspire run
+cd src/StationTriage/station\\\_triage/functions
+func start
 ```
 
-Or set `ArchitectPortfolio.AppHost` as the startup project in Visual Studio and run it. The Aspire dashboard opens automatically and shows all five services plus the Azurite container coming up green. From there you can submit a manifest in the dashboard and watch it flow through the full pipeline: manifest logger to risk-assessment function to triage function to the database, surfaced back in the triage queues.
+`local.settings.json` required (not committed):
 
-### How the local environment is wired
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "DATABASE\\\_URL": "postgresql://user:password@host/dbname",
+    "FUNCTIONS\\\_WORKER\\\_RUNTIME": "python"
+  }
+}
+```
 
-- **Storage:** Azurite runs as an Aspire-managed container on the fixed default ports (10000/10001/10002), so every service receives the canonical `UseDevelopmentStorage=true` connection string and they all share one emulator. This is what lets the queue published by App 1 reach the function in App 2.
-- **Database:** Both the triage web app and the triage function point at the Neon dev branch via `DATABASE_URL`. Postgres is not containerized locally; a stable cloud endpoint avoids dynamic-port churn and keeps the dev schema isolated from production.
-- **CORS:** The .NET APIs allow any origin when running in the Development environment and lock down to the deployed origin in Production, mirroring the Django app's `DEBUG`-gated CORS. This means Aspire's dynamically assigned dashboard port never requires CORS maintenance.
-- **The triage Python function:** Aspire's first-class Azure Functions integration is .NET-only (it works by rewriting `dotnet run` into `func start` via MSBuild, a hook Python projects do not have). The Python function is therefore launched through small OS-specific bootstrap scripts: `start.cmd` on Windows and `start.sh` on macOS/Linux. Each script creates its virtual environment if missing, installs requirements, activates it, and hands off to `func start`. This keeps `aspire run` cross-platform while preserving the same clone-and-run experience Aspire provides natively for the Django app.
+### App 4: StationDashboard
 
-### Running a single service in isolation
+```bash
+cd src/StationDashboard
+npm install
+cp .env.example .env
+npm run dev
+```
 
-Each service can still be run on its own with `dotnet run`, `func start`, or `python manage.py runserver` for focused debugging. When run outside Aspire, a service reads its configuration from its own user secrets, `local.settings.json`, or `.env` rather than from Aspire-injected environment variables. The `local.settings.json` files mirror the same values Aspire injects, so both modes work.
+The `.env.example` values point at the deployed Azure APIs by default. Replace them with local URLs (for example `http://localhost:5000`) if running the backends locally too.
 
 ---
 
 ## Architectural Decision Summary
 
-| App | Pattern | Why |
-|-----|---------|-----|
-| StationShipManifestLogger | Vertical Slice | Single responsibility, minimal business logic, feature cohesion over layer separation |
-| StationAI | Hexagonal (Ports and Adapters) | High external dependency volatility, LLM provider and storage are both likely to change |
-| StationTriage | Django MTV | Deliberately built in a second language to demonstrate range, with Django as the standard, recognizable choice for CRUD-style apps in that ecosystem |
-| StationDashboard | Vertical Slice (frontend) | Same single-responsibility, low-complexity reasoning as App 1, applied to React's feature-folder convention |
+|App|Pattern|Why|
+|-|-|-|
+|StationShipManifestLogger|Vertical Slice|Single responsibility, minimal business logic, feature cohesion over layer separation|
+|StationAI|Hexagonal (Ports and Adapters)|High external dependency volatility, LLM provider and storage are both likely to change|
+|StationTriage|Django MTV|Deliberately built in a second language to demonstrate range, with Django as the standard, recognizable choice for CRUD-style apps in that ecosystem|
+|StationDashboard|Vertical Slice (frontend)|Same single-responsibility, low-complexity reasoning as App 1, applied to React's feature-folder convention|
 
-| Concern | Decision | Rationale |
-|---------|----------|-----------|
-| Inter-service messaging | Azure Storage Queues | Zero cost at portfolio scale, sufficient reliability, demonstrates async event-driven patterns |
-| LLM provider | Google Gemini (free tier) | Zero cost, 500 req/day sufficient for portfolio traffic, swappable via adapter |
-| App 1 database | SQLite | Zero cost, adequate for append-only audit log with no UI query requirements |
-| App 3 database | Postgres (Neon serverless) | Multiple concurrent readers and writers across web app and Function require real concurrency support, unlike App 1's single-writer log |
-| Rules storage | Azure Blob Storage | Single overwritable value, zero cost, eliminates unnecessary database dependency |
-| App 3 Function dependency model | Standalone (no Django import) | Avoids deployment coupling between the web app's and Function's dependency lists; the Function's `requirements.txt` accurately reflects only what it uses |
-| Hazard level validation | Schema constraint + app-level retry + DB `CheckConstraint` | No single point of failure; an out-of-range value is rejected regardless of which layer or process attempts to write it |
-| Hosting | Azure App Service F1 + Functions Flex Consumption + Static Web Apps | Zero fixed cost across every component, scales to zero, sufficient for portfolio traffic |
+|Concern|Decision|Rationale|
+|-|-|-|
+|Inter-service messaging|Azure Storage Queues|Zero cost at portfolio scale, sufficient reliability, demonstrates async event-driven patterns|
+|LLM provider|Google Gemini (free tier)|Zero cost, 500 req/day sufficient for portfolio traffic, swappable via adapter|
+|App 1 database|SQLite|Zero cost, adequate for append-only audit log with no UI query requirements|
+|App 3 database|Postgres (Neon serverless)|Multiple concurrent readers and writers across web app and Function require real concurrency support, unlike App 1's single-writer log|
+|Rules storage|Azure Blob Storage|Single overwritable value, zero cost, eliminates unnecessary database dependency|
+|App 3 Function dependency model|Standalone (no Django import)|Avoids deployment coupling between the web app's and Function's dependency lists; the Function's `requirements.txt` accurately reflects only what it uses|
+|Hazard level validation|Schema constraint + app-level retry + DB `CheckConstraint`|No single point of failure; an out-of-range value is rejected regardless of which layer or process attempts to write it|
+|Hosting|Azure App Service F1 + Functions Flex Consumption + Static Web Apps|Zero fixed cost across every component, scales to zero, sufficient for portfolio traffic|
+
+
+

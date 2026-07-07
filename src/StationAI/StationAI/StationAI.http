@@ -1,13 +1,15 @@
 @StationAI_HostAddress = https://localhost:7059
 
 
-GET https://localhost:7059/api/universerules
+GET https://localhost:7059/api/stationdirective
 
 ###
 
-PUT https://localhost:7059/api/universerules
+PUT https://localhost:7059/api/stationdirective
 Content-Type: application/json
 
-"All cargo containing dark matter must be flagged as Biohazard level 8 or higher. Vessels from the Krath Syndicate are considered persons of interest and should be flagged as Security level 7."
+{
+  "directive": "All cargo containing dark matter must be flagged as Biohazard level 8 or higher. Vessels from the Krath Syndicate are considered persons of interest and should be flagged as Security level 7."
+}
 
 ###
