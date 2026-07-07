@@ -13,18 +13,18 @@ namespace StationAI.Adapters.Inbound
     {
         private readonly IStationDirectiveRepository _stationDirectiveRepository;
         private readonly ILargeLanguageModelService _llmService;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<StationDirectiveController> _logger;
 
         public StationDirectiveController(
             IStationDirectiveRepository stationDirectiveRepository,
-            ILargeLanguageModelService lmService,
-            IServiceProvider serviceProvider,
+            ILargeLanguageModelService llmService,
+            IServiceScopeFactory scopeFactory,
             ILogger<StationDirectiveController> logger)
         {
             _stationDirectiveRepository = stationDirectiveRepository;
-            _llmService = lmService;
-            _serviceProvider = serviceProvider;
+            _llmService = llmService;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
@@ -45,6 +45,7 @@ namespace StationAI.Adapters.Inbound
         {
             await _stationDirectiveRepository.SaveRules(request.Directive);
 
+            //This process may take awhile to process. Rather than making the user wait on it we'll run it on a separate thread. 
             _ = Task.Run(() => ProcessDirectiveAsync(request.Directive));
 
             return Ok();
@@ -52,16 +53,22 @@ namespace StationAI.Adapters.Inbound
 
         private async Task ProcessDirectiveAsync(string directive)
         {
-            await using var scope = _serviceProvider.CreateAsyncScope();
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var llmService = scope.ServiceProvider.GetRequiredService<ILargeLanguageModelService>();
+            var parsingService = scope.ServiceProvider.GetRequiredService<IDirectiveParsingService>();
+            var targetRepository = scope.ServiceProvider.GetRequiredService<IDirectiveTargetRepository>();
 
-            bool moderationRejected = await IsRejectedByModerationAsync(directive);
+            bool moderationRejected = await IsRejectedByModerationAsync(directive, llmService, targetRepository);
             if (moderationRejected)
                 return;
 
-            await ParseAndStoreTargetsAsync(scope.ServiceProvider, directive);
+            await ParseAndStoreTargetsAsync(directive, parsingService, targetRepository);
         }
 
-        private async Task<bool> IsRejectedByModerationAsync(string directive)
+        private async Task<bool> IsRejectedByModerationAsync(
+            string directive,
+            ILargeLanguageModelService llmService,
+            IDirectiveTargetRepository targetRepository)
         {
             try
             {
@@ -78,7 +85,7 @@ namespace StationAI.Adapters.Inbound
                     {{directive}}
                     """;
 
-                var response = await _llmService.SendPrompt(prompt, typeof(ModerationResponse));
+                var response = await llmService.SendPrompt(prompt, typeof(ModerationResponse));
                 var result = JsonSerializer.Deserialize<ModerationResponse>(response,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -91,7 +98,19 @@ namespace StationAI.Adapters.Inbound
 
                 if (result.Inappropriate)
                 {
+                    _logger.LogWarning("Directive moderation rejected submitted content; reverting to fallback.");
+
                     await _stationDirectiveRepository.SaveRules(AriaIdentity.NoStationDirectiveFallback);
+
+                    try
+                    {
+                        await targetRepository.SaveTargetsAsync([]);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to clear directive targets after moderation rejection.");
+                    }
+
                     return true;
                 }
 
@@ -99,21 +118,20 @@ namespace StationAI.Adapters.Inbound
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
-                    "Directive moderation check failed; submitted content left in place.");
+                _logger.LogWarning(ex, "Directive moderation check failed; submitted content left in place.");
                 return false;
             }
         }
 
-        private async Task ParseAndStoreTargetsAsync(IServiceProvider provider, string directive)
+        private async Task ParseAndStoreTargetsAsync(
+            string directive,
+            IDirectiveParsingService parsingService,
+            IDirectiveTargetRepository targetRepository)
         {
             try
             {
-                var parser = provider.GetRequiredService<IDirectiveParsingService>();
-                var targetRepo = provider.GetRequiredService<IDirectiveTargetRepository>();
-
-                var targets = await parser.Parse(directive);
-                await targetRepo.SaveTargetsAsync(targets);
+                var targets = await parsingService.Parse(directive);
+                await targetRepository.SaveTargetsAsync(targets);
 
                 _logger.LogInformation(
                     "Parsed and stored {Count} directive target(s) from saved directive.", targets.Count);

@@ -30,8 +30,19 @@ public class DirectiveParsingService : IDirectiveParsingService
             return [];
 
         string prompt = BuildPrompt(directive);
+        string response;
 
-        string response = await _llmService.SendPrompt(prompt, typeof(List<DirectiveTarget>));
+        try
+        {
+            response = await _llmService.SendPrompt(prompt, typeof(List<DirectiveTarget>));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Directive parse failed: LLM call threw unexpectedly. Directive length: {Length}. No targets stored.",
+                directive.Length);
+            return [];
+        }
 
         List<DirectiveTarget>? parsed;
         try
@@ -40,21 +51,18 @@ public class DirectiveParsingService : IDirectiveParsingService
         }
         catch (JsonException ex)
         {
-            _logger.LogError(
-                ex,
-                "Directive parse failed: language model returned unparseable JSON. Raw response: {Response}",
+            _logger.LogWarning(ex,
+                "Directive parse failed: LLM returned unparseable JSON. Raw response: {Response}. No targets stored.",
                 response);
-            throw new InvalidOperationException(
-                "Failed to parse station directive: language model returned unparseable output.", ex);
+            return [];
         }
 
         if (parsed is null)
         {
-            _logger.LogError(
-                "Directive parse failed: language model returned null. Raw response: {Response}",
+            _logger.LogWarning(
+                "Directive parse failed: LLM returned null. Raw response: {Response}. No targets stored.",
                 response);
-            throw new InvalidOperationException(
-                "Failed to parse station directive: language model returned null.");
+            return [];
         }
 
         return Validate(parsed);
@@ -114,7 +122,7 @@ public class DirectiveParsingService : IDirectiveParsingService
             - Output ONLY a JSON array of these objects. No prose, no markdown, no code fences.
 
             Directive:            
-            {{ directive}}
+            {{directive}}
             """;
     }
 }
