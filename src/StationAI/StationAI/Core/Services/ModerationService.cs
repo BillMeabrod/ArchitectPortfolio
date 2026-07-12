@@ -8,8 +8,7 @@ namespace StationAI.Core.Services
         private readonly ILogger<ModerationService> _logger;
         private readonly ILargeLanguageModelService _llmService;
 
-        public ModerationService(
-            ILogger<ModerationService> logger, ILargeLanguageModelService llmService, IDirectiveTargetRepository targetRepository)
+        public ModerationService(ILogger<ModerationService> logger, ILargeLanguageModelService llmService)
         {
             _logger = logger;
             _llmService = llmService;
