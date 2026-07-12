@@ -102,9 +102,7 @@ public class SubmitManifestHandlerTests : IDisposable
         var log = await _context.ManifestAuditLogs.FindAsync(returnedId);
         Assert.NotNull(log);
         _mockQueueClient.Verify(
-            c => c.CreateIfNotExistsAsync(
-                It.IsAny<IDictionary<string, string>>(),
-                It.IsAny<CancellationToken>()),
+            c => c.CreateIfNotExistsAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
