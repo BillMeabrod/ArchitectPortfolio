@@ -114,3 +114,9 @@ Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
 - Tests behavior, not implementation — assert on outcomes, not on which internal methods were called
 - Uses mocks only for dependencies that cross a boundary (external service, database, queue)
 - Is readable without needing to trace through the production code to understand what it is asserting
+
+### Vertical Slice specifically
+
+In apps using Vertical Slice Architecture, do not introduce interfaces for infrastructure concerns (queue publishers, external clients, etc.) solely to enable mocking in tests. The pattern intentionally avoids this abstraction overhead.
+
+Unit tests in a Vertical Slice app should assert on the slice's own outputs — return values, database state, exceptions. Do not write unit tests that verify infrastructure side effects (e.g. that a queue message was sent). Those are integration test concerns.
