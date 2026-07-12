@@ -91,7 +91,7 @@ Before adding anything new:
 - Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps
 
 ## Testing
-This section should be followed for every new feature added. If tests are required it should not pass PR
+This section should be followed for every new feature added. If tests are required, the PR should not be approved without them.
 Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
 
 **Write tests when you add or modify:**
