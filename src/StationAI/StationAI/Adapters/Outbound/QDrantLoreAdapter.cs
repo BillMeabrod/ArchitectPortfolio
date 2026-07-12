@@ -57,6 +57,10 @@ public class QdrantLoreAdapter : ILoreRepository
         await using var conn = new NpgsqlConnection(_dbConnectionString);
         await conn.OpenAsync();
 
+        var vectors = new List<float[]>(entries.Count);
+        foreach (var entry in entries)
+            vectors.Add(await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}"));
+
         var saved = new List<LoreEntry>(entries.Count);
         await using var tx = await conn.BeginTransactionAsync();
 
@@ -64,11 +68,8 @@ public class QdrantLoreAdapter : ILoreRepository
             saved.Add(await UpsertPostgresAsync(conn, entry, tx));
 
         var points = new List<PointStruct>(saved.Count);
-        foreach (var entry in saved)
-        {
-            var vector = await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}");
-            points.Add(BuildPoint(entry, vector));
-        }
+        for (var i = 0; i < saved.Count; i++)
+            points.Add(BuildPoint(saved[i], vectors[i]));
 
         await _qdrant.UpsertAsync(_collectionName, points);
         await tx.CommitAsync();
