@@ -89,3 +89,28 @@ Before adding anything new:
 - Do not create or modify any `.bicep` files
 - Do not touch `infra/` at all
 - Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps
+
+## Testing
+This section should be followed for every new feature added. If tests are required it should not pass PR
+Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
+
+**Write tests when you add or modify:**
+- Business logic in a service class
+- Validation logic
+- Logic that orchestrates multiple dependencies
+- Fail-open or fail-closed behavior on exceptions
+
+**Do not write tests for:**
+- Controllers or entry points — they are thin delegates with no logic to assert
+- Adapters — these are infrastructure concerns that require real external services
+- Constants, configuration classes, or data models with no behavior
+
+**Where tests live:**
+- Read the existing test project structure before adding new test files
+- Follow the naming and organization conventions already in place
+- New test classes go in the test project for the app being modified
+
+**What makes a good test:**
+- Tests behavior, not implementation — assert on outcomes, not on which internal methods were called
+- Uses mocks only for dependencies that cross a boundary (external service, database, queue)
+- Is readable without needing to trace through the production code to understand what it is asserting

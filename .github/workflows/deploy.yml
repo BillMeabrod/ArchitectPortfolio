@@ -4,8 +4,43 @@ on:
     branches:
       - main
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test StationShipManifestLogger
+        run: dotnet test src/StationShipManifestLogger/StationShipManifestLogger.Tests/StationShipManifestLogger.Tests.csproj -c Release
+
+      - name: Test StationAI
+        run: dotnet test src/StationAI/StationAI.Tests/StationAI.Tests.csproj -c Release
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install StationTriage test dependencies
+        working-directory: src/StationTriage/station_triage
+        run: pip install -r requirements.txt -r requirements-test.txt
+
+      - name: Test StationTriage
+        working-directory: src/StationTriage/station_triage
+        env:
+          DATABASE_URL: sqlite:///test.db
+          DJANGO_SECRET_KEY: ci-test-secret-key
+          DEBUG: 'True'
+        run: pytest
+
   deploy-manifest-logger:
     name: Deploy ManifestLogger
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +65,10 @@ jobs:
         with:
           app-name: ship-manifest-logger-api
           package: ./publish/manifest-logger
+
   deploy-station-ai:
     name: Deploy StationAI
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +100,10 @@ jobs:
         with:
           app-name: station-ai-functions
           package: ./publish/station-ai-functions
+
   deploy-station-triage:
     name: Deploy StationTriage
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,8 +145,10 @@ jobs:
           app-name: station-triage-functions
           package: station-triage-functions.zip
           remote-build: true
+
   deploy-station-dashboard:
     name: Deploy StationDashboard
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
