@@ -70,7 +70,7 @@ builder.Services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
 builder.Services.AddScoped<IDirectiveParsingService, DirectiveParsingService>();
 builder.Services.AddScoped<IDirectiveTargetRepository, DirectiveTargetBlobStorageAdapter>();
-builder.Services.AddScoped<IStationDirectiveService, StationDirectiveService>();
+builder.Services.AddSingleton<IStationDirectiveService, StationDirectiveService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddHealthChecks();
 
