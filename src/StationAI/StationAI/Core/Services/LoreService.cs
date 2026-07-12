@@ -62,7 +62,27 @@ public class LoreService : ILoreService
             return false;
 
         await _loreRepository.DeleteAsync(id);
-        await _loreStoreRepository.DeleteAsync(id);
+
+        try
+        {
+            await _loreStoreRepository.DeleteAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete lore entry {Id} from Postgres after Qdrant delete. Restoring Qdrant entry.", id);
+
+            try
+            {
+                await _loreRepository.UpsertAsync(existing);
+            }
+            catch (Exception restoreEx)
+            {
+                _logger.LogError(restoreEx, "Failed to restore lore entry {Id} in Qdrant after Postgres delete failure.", id);
+            }
+
+            throw;
+        }
+
         return true;
     }
 

@@ -36,7 +36,7 @@ public class QdrantLoreAdapter : ILoreRepository
     {
         await EnsureCollectionExistsAsync();
         if (entry.Id == 0)
-            throw new InvalidOperationException("Lore entry must have an ID before upserting to Qdrant.");
+            throw new InvalidOperationException("Lore entry must be saved to Postgres first so it has an ID before upserting to Qdrant.");
 
         var vector = await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}");
         await _qdrant.UpsertAsync(_collectionName, [BuildPoint(entry, vector)]);
