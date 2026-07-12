@@ -89,3 +89,36 @@ Before adding anything new:
 - Do not create or modify any `.bicep` files
 - Do not touch `infra/` at all
 - Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps
+
+## Testing
+This section should be followed for every new feature added. If tests are required, the PR should not be approved without them.
+Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
+
+**Write tests when you add or modify:**
+- Business logic in a service class
+- Validation logic
+- Logic that orchestrates multiple dependencies
+- Fail-open or fail-closed behavior on exceptions
+
+**Do not write tests for:**
+- Controllers or entry points that are thin delegates with no logic to assert
+- Adapters — these are infrastructure concerns that require real external services
+- Constants, configuration classes, or data models with no behavior
+
+Endpoint-level integration tests are acceptable when an endpoint contains meaningful behavior (for example filtering, sorting, or request-specific orchestration).
+
+**Where tests live:**
+- Read the existing test project structure before adding new test files
+- Follow the naming and organization conventions already in place
+- New test classes go in the test project for the app being modified
+
+**What makes a good test:**
+- Tests behavior, not implementation — assert on outcomes, not on which internal methods were called
+- Uses mocks only for dependencies that cross a boundary (external service, database, queue)
+- Is readable without needing to trace through the production code to understand what it is asserting
+
+### Vertical Slice specifically
+
+In apps using Vertical Slice Architecture, do not introduce interfaces for infrastructure concerns (queue publishers, external clients, etc.) solely to enable mocking in tests. The pattern intentionally avoids this abstraction overhead.
+
+Unit tests in a Vertical Slice app should assert on the slice's own outputs — return values, database state, exceptions. Do not write unit tests that verify infrastructure side effects (e.g. that a queue message was sent). Those are integration test concerns.

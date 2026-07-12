@@ -6,8 +6,10 @@
   <Folder Name="/src/StationAI/">
     <Project Path="src/StationAI/StationAI.Functions/StationAI.Functions.csproj" />
     <Project Path="src/StationAI/StationAI/StationAI.csproj" />
+    <Project Path="src/StationAI/StationAI.Tests/StationAI.Tests.csproj" />
   </Folder>
   <Folder Name="/src/StationShipManifestLogger/">
     <Project Path="src/StationShipManifestLogger/StationShipManifestLogger/StationShipManifestLogger.csproj" />
+    <Project Path="src/StationShipManifestLogger/StationShipManifestLogger.Tests/StationShipManifestLogger.Tests.csproj" />
   </Folder>
 </Solution>
