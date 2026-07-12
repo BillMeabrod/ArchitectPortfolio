@@ -1,7 +1,7 @@
-﻿using StationAI.Adapters.Inbound;
-using StationAI.Core.Interfaces;
+﻿using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Models.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace StationAI.Core.Services;
 
@@ -57,9 +57,9 @@ public class LoreService : ILoreService
         return true;
     }
 
-    public async Task<BulkImportResult> BulkCreateAsync(IReadOnlyList<(string Title, string Category, string Body)> entries)
+    public async Task<BulkLoreImportResult> BulkCreateAsync(IReadOnlyList<(string Title, string Category, string Body)> entries)
     {
-        var result = new BulkImportResult();
+        var result = new BulkLoreImportResult();
         var toSave = new List<LoreEntry>(entries.Count);
 
         foreach (var (title, category, body) in entries)
@@ -67,7 +67,7 @@ public class LoreService : ILoreService
             var errors = Validate(title, category, body);
             if (errors.Count > 0)
             {
-                result.Failures.Add(new BulkImportFailure(title, string.Join("; ", errors)));
+                result.Failures.Add(new BulkLoreImportFailure(title, string.Join("; ", errors)));
                 continue;
             }
 

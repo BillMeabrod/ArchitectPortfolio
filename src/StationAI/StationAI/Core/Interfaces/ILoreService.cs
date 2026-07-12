@@ -1,5 +1,4 @@
-﻿using StationAI.Adapters.Inbound;
-using StationAI.Core.Models;
+﻿using StationAI.Core.Models;
 
 namespace StationAI.Core.Interfaces;
 
@@ -10,5 +9,5 @@ public interface ILoreService
     Task<IEnumerable<LoreEntry>> GetAllAsync();
     Task<LoreEntry?> UpdateAsync(int id, string title, string category, string body);
     Task<bool> DeleteAsync(int id);
-    Task<BulkImportResult> BulkCreateAsync(IReadOnlyList<(string Title, string Category, string Body)> entries);
+    Task<BulkLoreImportResult> BulkCreateAsync(IReadOnlyList<(string Title, string Category, string Body)> entries);
 }

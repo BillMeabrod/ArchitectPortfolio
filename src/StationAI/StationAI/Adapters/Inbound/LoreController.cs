@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
-using StationAI.Core.Models.Constants;
 using StationAI.Core.Models.Validation;
 using System.ComponentModel.DataAnnotations;
 
@@ -11,12 +10,12 @@ namespace StationAI.Adapters.Inbound;
 [Route("api/[controller]")]
 public class LoreController : ControllerBase
 {
-    private readonly ILoreRepository _loreRepository;
+    private readonly ILoreService _loreService;
     private readonly ILogger<LoreController> _logger;
 
-    public LoreController(ILoreRepository loreRepository, ILogger<LoreController> logger)
+    public LoreController(ILoreService loreService, ILogger<LoreController> logger)
     {
-        _loreRepository = loreRepository;
+        _loreService = loreService;
         _logger = logger;
     }
 
@@ -25,8 +24,7 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var entries = await _loreRepository.GetAllAsync();
-            return Ok(entries);
+            return Ok(await _loreService.GetAllAsync());
         }
         catch (Exception ex)
         {
@@ -40,11 +38,8 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var entry = await _loreRepository.GetByIdAsync(id);
-            if (entry is null)
-                return NotFound($"Lore entry {id} not found");
-
-            return Ok(entry);
+            var entry = await _loreService.GetByIdAsync(id);
+            return entry is null ? NotFound($"Lore entry {id} not found") : Ok(entry);
         }
         catch (Exception ex)
         {
@@ -58,14 +53,7 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var entry = new LoreEntry
-            {
-                Title = request.Title,
-                Category = request.Category.ToLowerInvariant(),
-                Body = request.Body
-            };
-
-            var created = await _loreRepository.SaveAsync(entry);
+            var created = await _loreService.CreateAsync(request.Title, request.Category, request.Body);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (Exception ex)
@@ -76,7 +64,7 @@ public class LoreController : ControllerBase
     }
 
     [HttpPost("bulk")]
-    public async Task<ActionResult<BulkImportResult>> BulkCreate([FromBody] List<LoreEntryRequest> requests)
+    public async Task<ActionResult<BulkLoreImportResult>> BulkCreate([FromBody] List<LoreEntryRequest> requests)
     {
         if (requests.Count == 0)
             return BadRequest("At least one entry is required.");
@@ -84,45 +72,17 @@ public class LoreController : ControllerBase
         if (requests.Count > 100)
             return BadRequest("Bulk import is limited to 100 entries per request.");
 
-        var result = new BulkImportResult();
-        var toSave = new List<LoreEntry>(requests.Count);
-
-        foreach (var request in requests)
+        try
         {
-            var errors = ValidateEntry(request);
-            if (errors.Count > 0)
-            {
-                result.Failures.Add(new BulkImportFailure(request.Title, string.Join("; ", errors)));
-                continue;
-            }
-
-            toSave.Add(new LoreEntry
-            {
-                Title = request.Title,
-                Category = request.Category.ToLowerInvariant(),
-                Body = request.Body
-            });
+            var entries = requests.Select(r => (r.Title, r.Category, r.Body)).ToList();
+            var result = await _loreService.BulkCreateAsync(entries);
+            return Ok(result);
         }
-
-        if (toSave.Count > 0)
+        catch (Exception ex)
         {
-            try
-            {
-                var saved = await _loreRepository.SaveBulkAsync(toSave);
-                result.Succeeded = saved.Count;
-
-                _logger.LogInformation(
-                    "Bulk lore import complete: {Succeeded} saved, {Failed} failed.",
-                    result.Succeeded, result.Failures.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Bulk lore import failed during storage write.");
-                return StatusCode(500, "Bulk import failed during storage write. No entries were saved.");
-            }
+            _logger.LogError(ex, "Bulk lore import failed.");
+            return StatusCode(500, "Bulk import failed during storage write. No entries were saved.");
         }
-
-        return Ok(result);
     }
 
     [HttpPut("{id:int}")]
@@ -130,16 +90,8 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var existing = await _loreRepository.GetByIdAsync(id);
-            if (existing is null)
-                return NotFound($"Lore entry {id} not found");
-
-            existing.Title = request.Title;
-            existing.Category = request.Category.ToLowerInvariant();
-            existing.Body = request.Body;
-
-            var updated = await _loreRepository.SaveAsync(existing);
-            return Ok(updated);
+            var updated = await _loreService.UpdateAsync(id, request.Title, request.Category, request.Body);
+            return updated is null ? NotFound($"Lore entry {id} not found") : Ok(updated);
         }
         catch (Exception ex)
         {
@@ -153,34 +105,14 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var existing = await _loreRepository.GetByIdAsync(id);
-            if (existing is null)
-                return NotFound($"Lore entry {id} not found");
-
-            await _loreRepository.DeleteAsync(id);
-            return NoContent();
+            var deleted = await _loreService.DeleteAsync(id);
+            return deleted ? NoContent() : NotFound($"Lore entry {id} not found");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete lore entry {Id}", id);
             return StatusCode(500, $"Failed to delete lore entry {id}");
         }
-    }
-
-    private static List<string> ValidateEntry(LoreEntryRequest entry)
-    {
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(entry.Title) || entry.Title.Length > 200)
-            errors.Add("Title is required and must be 200 characters or fewer");
-
-        if (!LoreCategories.IsValid(entry.Category))
-            errors.Add($"Category '{entry.Category}' is not valid. Must be one of: {string.Join(", ", LoreCategories.All)}");
-
-        if (string.IsNullOrWhiteSpace(entry.Body) || entry.Body.Length < 50 || entry.Body.Length > 8000)
-            errors.Add("Body is required and must be between 50 and 8000 characters");
-
-        return errors;
     }
 }
 
@@ -189,11 +121,3 @@ public record LoreEntryRequest(
     [Required][ValidLoreCategory] string Category,
     [Required][MinLength(50)][MaxLength(8000)] string Body
 );
-
-public record BulkImportFailure(string Title, string Reason);
-
-public class BulkImportResult
-{
-    public int Succeeded { get; set; }
-    public List<BulkImportFailure> Failures { get; set; } = [];
-}
