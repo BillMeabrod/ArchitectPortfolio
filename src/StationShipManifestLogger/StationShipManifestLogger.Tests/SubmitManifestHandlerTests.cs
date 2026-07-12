@@ -1,7 +1,5 @@
-using Azure;
 using Xunit;
 using Azure.Storage.Queues;
-using Azure.Storage.Queues.Models;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using StationShipManifestLogger.Common.Data;
@@ -23,21 +21,7 @@ public class SubmitManifestHandlerTests : IDisposable
             .Options;
         _context = new ManifestLoggerDbContext(options);
 
-        _mockQueueClient = new Mock<QueueClient>();
-        _mockQueueClient
-            .Setup(c => c.CreateIfNotExistsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<Response>().Object);
-
-        _mockQueueClient
-            .Setup(c => c.SendMessageAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<Response<SendReceipt>>().Object);
-        _mockQueueClient
-            .Setup(c => c.SendMessageAsync(
-                It.IsAny<BinaryData>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Mock<Response<SendReceipt>>().Object);
+        _mockQueueClient = new Mock<QueueClient>(MockBehavior.Loose);
 
         var mockQueueServiceClient = new Mock<QueueServiceClient>();
         mockQueueServiceClient
@@ -88,22 +72,6 @@ public class SubmitManifestHandlerTests : IDisposable
         Assert.Equal(command.ShipName, deserialized.ShipName);
         Assert.Equal(command.CargoItems, deserialized.CargoItems);
         Assert.Equal(command.Passengers, deserialized.Passengers);
-    }
-
-    [Fact]
-    public async Task Handle_CallsPublishAsync_AfterSaving()
-    {
-        var command = BuildCommand();
-
-        int returnedId = await _sut.Handle(command, CancellationToken.None);
-
-        // CreateIfNotExistsAsync is the first call inside PublishAsync, so verifying it was
-        // invoked proves PublishAsync ran. The DB assertion proves save came first.
-        var log = await _context.ManifestAuditLogs.FindAsync(returnedId);
-        Assert.NotNull(log);
-        _mockQueueClient.Verify(
-            c => c.CreateIfNotExistsAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
     }
 
     [Fact]

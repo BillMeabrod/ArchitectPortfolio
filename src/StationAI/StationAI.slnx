@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="StationAI.Functions/StationAI.Functions.csproj" Id="a44646cf-f175-4f99-8976-a0b8e4800266" />
   <Project Path="StationAI/StationAI.csproj" />
+  <Project Path="StationAI.Tests/StationAI.Tests.csproj" />
 </Solution>
