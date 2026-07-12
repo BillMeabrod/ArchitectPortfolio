@@ -26,7 +26,14 @@ namespace StationAI.Core.Services
             {
                 _logger.LogWarning("Directive moderation rejected submitted content; reverting to fallback.");
 
-                await stationDirectiveRepository.SaveRules(AriaIdentity.NoStationDirectiveFallback);
+                try
+                {
+                    await stationDirectiveRepository.SaveRules(AriaIdentity.NoStationDirectiveFallback);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to revert directive to fallback after moderation rejection.");
+                }
 
                 try
                 {

@@ -81,7 +81,7 @@ public class LoreController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Bulk lore import failed.");
-            return StatusCode(500, "Bulk import failed during storage write. No entries were saved.");
+            return StatusCode(500, "Bulk import failed. No entries were saved.");
         }
     }
 

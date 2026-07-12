@@ -12,13 +12,16 @@ namespace StationAI.Adapters.Inbound
     {
         private readonly IStationDirectiveService _stationDirectiveService;
         private readonly IStationDirectiveRepository _stationDirectiveRepository;
+        private readonly ILogger<StationDirectiveController> _logger;
 
         public StationDirectiveController(
             IStationDirectiveRepository stationDirectiveRepository,
-            IStationDirectiveService stationDirectiveService)
+            IStationDirectiveService stationDirectiveService,
+            ILogger<StationDirectiveController> logger)
         {
             _stationDirectiveRepository = stationDirectiveRepository;
             _stationDirectiveService = stationDirectiveService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -38,8 +41,17 @@ namespace StationAI.Adapters.Inbound
         {
             await _stationDirectiveRepository.SaveRules(request.Directive);
 
-            //This process may take awhile to process. Rather than making the user wait on it we'll run it on a separate thread. 
-            _ = Task.Run(() => _stationDirectiveService.ProcessDirectiveAsync(request.Directive));
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _stationDirectiveService.ProcessDirectiveAsync(request.Directive);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Background directive processing failed.");
+                }
+            });
 
             return Ok();
         }        

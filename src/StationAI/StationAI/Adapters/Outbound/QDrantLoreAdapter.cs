@@ -58,13 +58,10 @@ public class QdrantLoreAdapter : ILoreRepository
         await conn.OpenAsync();
 
         var saved = new List<LoreEntry>(entries.Count);
-        await using (var tx = await conn.BeginTransactionAsync())
-        {
-            foreach (var entry in entries)
-                saved.Add(await UpsertPostgresAsync(conn, entry, tx));
+        await using var tx = await conn.BeginTransactionAsync();
 
-            await tx.CommitAsync();
-        }
+        foreach (var entry in entries)
+            saved.Add(await UpsertPostgresAsync(conn, entry, tx));
 
         var points = new List<PointStruct>(saved.Count);
         foreach (var entry in saved)
@@ -74,6 +71,7 @@ public class QdrantLoreAdapter : ILoreRepository
         }
 
         await _qdrant.UpsertAsync(_collectionName, points);
+        await tx.CommitAsync();
 
         return saved;
     }
