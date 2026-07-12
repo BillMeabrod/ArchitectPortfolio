@@ -1,4 +1,6 @@
-SECRET_KEY = "test-only-secret-key-not-for-production"
+import os
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "test-only-secret-key-not-for-production")
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 

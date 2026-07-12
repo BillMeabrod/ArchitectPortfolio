@@ -25,24 +25,17 @@ public class SubmitManifestHandlerTests : IDisposable
 
         _mockQueueClient = new Mock<QueueClient>();
         _mockQueueClient
-            .Setup(c => c.CreateIfNotExistsAsync(
-                It.IsAny<IDictionary<string, string>>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(c => c.CreateIfNotExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Mock<Response>().Object);
 
-        // Cover both the string overload and the BinaryData overload since the SDK may route between them.
         _mockQueueClient
             .Setup(c => c.SendMessageAsync(
                 It.IsAny<string>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Mock<Response<SendReceipt>>().Object);
         _mockQueueClient
             .Setup(c => c.SendMessageAsync(
                 It.IsAny<BinaryData>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Mock<Response<SendReceipt>>().Object);
 
@@ -109,9 +102,7 @@ public class SubmitManifestHandlerTests : IDisposable
         var log = await _context.ManifestAuditLogs.FindAsync(returnedId);
         Assert.NotNull(log);
         _mockQueueClient.Verify(
-            c => c.CreateIfNotExistsAsync(
-                It.IsAny<IDictionary<string, string>>(),
-                It.IsAny<CancellationToken>()),
+            c => c.CreateIfNotExistsAsync(It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

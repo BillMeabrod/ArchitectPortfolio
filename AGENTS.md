@@ -91,7 +91,7 @@ Before adding anything new:
 - Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps
 
 ## Testing
-This section should be followed for every new feature added. If tests are required it should not pass PR
+This section should be followed for every new feature added. If tests are required, the PR should not be approved without them.
 Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
 
 **Write tests when you add or modify:**
@@ -101,9 +101,11 @@ Do not aim for 100% test coverage. Aim for coverage of the logic that matters.
 - Fail-open or fail-closed behavior on exceptions
 
 **Do not write tests for:**
-- Controllers or entry points — they are thin delegates with no logic to assert
+- Controllers or entry points that are thin delegates with no logic to assert
 - Adapters — these are infrastructure concerns that require real external services
 - Constants, configuration classes, or data models with no behavior
+
+Endpoint-level integration tests are acceptable when an endpoint contains meaningful behavior (for example filtering, sorting, or request-specific orchestration).
 
 **Where tests live:**
 - Read the existing test project structure before adding new test files
