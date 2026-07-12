@@ -1,7 +1,6 @@
 ﻿using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Models.Constants;
-using Microsoft.Extensions.Logging;
 
 namespace StationAI.Core.Services;
 
