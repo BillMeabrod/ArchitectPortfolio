@@ -1,84 +1,91 @@
-\# Project Instructions for AI Coding Agents
+# Project Instructions for AI Coding Agents
 
-
-
-\## Code Comments
+## Code Comments
 
 Do not add comments that restate what the code does. Only comment:
 
-\- Non-obvious business logic or "why" decisions a future reader couldn't infer from the code itself
+- Non-obvious business logic or "why" decisions a future reader couldn't infer from the code itself
+- Workarounds for known platform quirks or external system behavior
 
-\- Workarounds for known platform quirks (e.g., Azure-specific gotchas)
+Do not add comments like `// fetch the data` above a fetch call, or docblocks that just repeat the function signature in prose.
 
+## Before Writing Code
 
+Before implementing anything, read the existing code in the relevant app first:
 
-Do not add comments like "// fetch the data" above a fetch call, or docblocks that just repeat the function signature in prose.
-
-
-
-\## Before Writing Code
-
-Before implementing anything, read the existing code in the relevant app(s) first:
-
-\- Identify the architectural pattern already in use (Vertical Slice, Hexagonal, Django MTV, etc.)
-
-\- Identify existing naming conventions, file organization, and idioms
-
-\- Follow what's already there, even if you'd personally default to something else
-
-
+- Identify the architectural pattern already in use
+- Identify existing naming conventions, file organization, and idioms
+- Follow what's already there, even if you'd personally default to something else
 
 Do not introduce a new pattern, library, or convention without flagging it as a deliberate decision and explaining why the existing approach didn't fit.
 
-
-
-\## Problem-Solving Approach
+## Problem-Solving Approach
 
 When you hit an obstacle, do not reach for the fastest workaround that makes the error go away. Instead:
 
-1\. Understand why the obstacle is occurring
-
-2\. Check if the obstacle indicates a misunderstanding of the existing architecture
-
-3\. Solve it in a way consistent with the existing patterns in this repo
-
-
+1. Understand why the obstacle is occurring
+2. Check if the obstacle indicates a misunderstanding of the existing architecture
+3. Solve it in a way consistent with the existing patterns in this repo
 
 If you genuinely believe a quick fix is the right call (e.g., a true one-off edge case), say so explicitly and explain the tradeoff rather than silently taking the shortcut.
 
+## Architectural Consistency
 
+Every app in this project uses a deliberate architectural pattern. Your job is to identify what that pattern is and follow it strictly — not to impose a different one.
 
-\## React Architecture (StationDashboard specifically)
+When reading the codebase, ask:
 
-Organize the codebase using a \*\*feature-folder structure\*\* (also called "feature-based" or "vertical slice" organization in frontend contexts) — group files by domain feature, not by file type. Avoid the common `components/`, `hooks/`, `types/`, `services/` top-level split.
+- How is the code organized? By layer, by feature, by domain?
+- Where does business logic live?
+- Where does data access live?
+- How do the layers communicate — direct calls, interfaces, events?
+- What is explicitly kept out of each layer?
 
+Once you understand the pattern, new code must fit it. A correct implementation in the wrong layer is still wrong.
 
+## Layer Boundaries
 
-Rules:
+Every architecture in this project enforces boundaries between layers. Identify what those boundaries are before writing anything.
 
-\- Each feature owns its own components, hooks, and types in one folder.
+Rules that apply regardless of which pattern is in use:
 
-\- No cross-feature imports except through a shared/common layer.
+- Each layer has a defined responsibility. Do not bleed concerns across layers.
+- If a layer communicates with another through an abstraction (interface, port, hook, etc.), do not bypass it with a direct reference.
+- If you find yourself adding logic to a layer that doesn't own that concern, stop and find the correct layer.
 
-\- Data fetching lives in custom hooks, not inside components.
+## Controllers and Entry Points
 
-\- No global state management library unless a feature genuinely requires cross-feature shared state — polling plus local component/hook state is sufficient for this app's scope.
+Inbound entry points — HTTP controllers, queue triggers, event handlers — must be thin. Their only job is to receive input, delegate to the appropriate service or handler, and return a response.
 
-\- Keep components presentational where possible; push fetching/polling logic into hooks.
+**If you are writing logic in an entry point, stop.** Extract it to the layer that owns that concern.
 
+This applies to:
+- Validation logic
+- Data mapping or transformation
+- Orchestration of multiple operations
+- Background or async work
 
+HTTP input models may live alongside the controller as they are part of the HTTP contract, not the domain.
 
-Use your judgment on naming and exact folder layout — the principle (feature cohesion over type-based grouping) matters more than matching any specific example structure.
+## Background Work and Service Lifetimes
 
+When kicking off background work from a short-lived context (e.g., an HTTP request), never capture scoped dependencies directly. The scope they were created in will be disposed before the work completes.
 
+Instead, create a new scope explicitly for the background work and resolve dependencies from it. Use the framework's scope factory for this — not a raw service provider reference.
 
-\## Scope Boundaries
+## Adding New Functionality
 
-\- Do not modify `.github/workflows/deploy.yml`
+Before adding anything new:
 
-\- Do not create or modify any `.bicep` files
+1. Identify which layer owns the concern you are implementing
+2. Check whether an abstraction already exists for it — use it if so, extend it if needed
+3. Implement in the correct layer
+4. Wire up any new dependencies through the existing registration pattern in that app
+5. Do not add a new layer, pattern, or abstraction without flagging it explicitly
 
-\- Do not touch `infra/` at all
+## Scope Boundaries
 
-\- Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps
-
+- Do not modify `.github/workflows/deploy.yml`
+- Do not create or modify any `.bicep` files
+- Do not touch `infra/` at all
+- Stay within `src/StationDashboard/` for new code; only touch backend apps (StationShipManifestLogger, StationAI, StationTriage) for CORS configuration changes, and nothing else in those apps

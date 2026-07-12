@@ -4,9 +4,8 @@ namespace StationAI.Core.Interfaces;
 
 public interface ILoreRepository
 {
-    Task<LoreEntry> SaveAsync(LoreEntry entry);
-    Task<LoreEntry?> GetByIdAsync(int id);
-    Task<IEnumerable<LoreEntry>> GetAllAsync();
+    Task UpsertAsync(LoreEntry entry);
+    Task UpsertBulkAsync(IReadOnlyList<LoreEntry> entries);
     Task DeleteAsync(int id);
     Task<IEnumerable<LoreEntry>> SearchAsync(string query, int topK = 5);
 }

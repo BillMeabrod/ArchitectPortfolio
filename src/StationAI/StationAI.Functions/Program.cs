@@ -16,8 +16,6 @@ var host = new HostBuilder()
         var azureWebJobsStorage = Environment.GetEnvironmentVariable("AzureWebJobsStorage")
             ?? throw new InvalidOperationException("AzureWebJobsStorage environment variable is not set. Fix your configuration.");
 
-        var dbUrl = Environment.GetEnvironmentVariable("ConnectionStrings__DatabaseUrl")
-            ?? throw new InvalidOperationException("DatabaseUrl connection string is not set. Fix your configuration.");
         var qdrantUrl = Environment.GetEnvironmentVariable("Qdrant__Url")
             ?? throw new InvalidOperationException("Qdrant:Url is not set. Fix your configuration.");
         var qdrantApiKey = Environment.GetEnvironmentVariable("Qdrant__ApiKey")
@@ -30,7 +28,7 @@ var host = new HostBuilder()
         services.AddScoped<IDirectiveTargetRepository, DirectiveTargetBlobStorageAdapter>();
         services.AddSingleton<IEmbeddingService, GoogleEmbeddingAdapter>();
         services.AddSingleton<ILoreRepository>(sp =>
-            new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, qdrantCollection,
+            new QdrantLoreAdapter(qdrantUrl, qdrantApiKey, qdrantCollection,
                 sp.GetRequiredService<IEmbeddingService>()));
         services.AddSingleton(new BlobServiceClient(blobStorageConnection));
         services.AddSingleton(new QueueServiceClient(azureWebJobsStorage));

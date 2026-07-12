@@ -10,12 +10,12 @@ namespace StationAI.Adapters.Inbound;
 [Route("api/[controller]")]
 public class LoreController : ControllerBase
 {
-    private readonly ILoreRepository _loreRepository;
+    private readonly ILoreService _loreService;
     private readonly ILogger<LoreController> _logger;
 
-    public LoreController(ILoreRepository loreRepository, ILogger<LoreController> logger)
+    public LoreController(ILoreService loreService, ILogger<LoreController> logger)
     {
-        _loreRepository = loreRepository;
+        _loreService = loreService;
         _logger = logger;
     }
 
@@ -24,8 +24,7 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var entries = await _loreRepository.GetAllAsync();
-            return Ok(entries);
+            return Ok(await _loreService.GetAllAsync());
         }
         catch (Exception ex)
         {
@@ -39,11 +38,8 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var entry = await _loreRepository.GetByIdAsync(id);
-            if (entry is null)
-                return NotFound($"Lore entry {id} not found");
-
-            return Ok(entry);
+            var entry = await _loreService.GetByIdAsync(id);
+            return entry is null ? NotFound($"Lore entry {id} not found") : Ok(entry);
         }
         catch (Exception ex)
         {
@@ -53,18 +49,11 @@ public class LoreController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<LoreEntry>> Create(CreateLoreEntryRequest request)
+    public async Task<ActionResult<LoreEntry>> Create(LoreEntryRequest request)
     {
         try
         {
-            var entry = new LoreEntry
-            {
-                Title = request.Title,
-                Category = request.Category,
-                Body = request.Body
-            };
-
-            var created = await _loreRepository.SaveAsync(entry);
+            var created = await _loreService.CreateAsync(request.Title, request.Category, request.Body);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (Exception ex)
@@ -74,21 +63,35 @@ public class LoreController : ControllerBase
         }
     }
 
+    [HttpPost("bulk")]
+    public async Task<ActionResult<BulkLoreImportResult>> BulkCreate([FromBody] List<LoreEntryRequest> requests)
+    {
+        if (requests.Count == 0)
+            return BadRequest("At least one entry is required.");
+
+        if (requests.Count > 100)
+            return BadRequest("Bulk import is limited to 100 entries per request.");
+
+        try
+        {
+            var entries = requests.Select(r => (r.Title, r.Category, r.Body)).ToList();
+            var result = await _loreService.BulkCreateAsync(entries);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk lore import failed.");
+            return StatusCode(500, "Bulk import failed.");
+        }
+    }
+
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<LoreEntry>> Update(int id, UpdateLoreEntryRequest request)
+    public async Task<ActionResult<LoreEntry>> Update(int id, LoreEntryRequest request)
     {
         try
         {
-            var existing = await _loreRepository.GetByIdAsync(id);
-            if (existing is null)
-                return NotFound($"Lore entry {id} not found");
-
-            existing.Title = request.Title;
-            existing.Category = request.Category;
-            existing.Body = request.Body;
-
-            var updated = await _loreRepository.SaveAsync(existing);
-            return Ok(updated);
+            var updated = await _loreService.UpdateAsync(id, request.Title, request.Category, request.Body);
+            return updated is null ? NotFound($"Lore entry {id} not found") : Ok(updated);
         }
         catch (Exception ex)
         {
@@ -102,12 +105,8 @@ public class LoreController : ControllerBase
     {
         try
         {
-            var existing = await _loreRepository.GetByIdAsync(id);
-            if (existing is null)
-                return NotFound($"Lore entry {id} not found");
-
-            await _loreRepository.DeleteAsync(id);
-            return NoContent();
+            var deleted = await _loreService.DeleteAsync(id);
+            return deleted ? NoContent() : NotFound($"Lore entry {id} not found");
         }
         catch (Exception ex)
         {
@@ -117,13 +116,7 @@ public class LoreController : ControllerBase
     }
 }
 
-public record CreateLoreEntryRequest(
-    [Required][MaxLength(200)] string Title,
-    [Required][ValidLoreCategory] string Category,
-    [Required][MinLength(50)][MaxLength(8000)] string Body
-);
-
-public record UpdateLoreEntryRequest(
+public record LoreEntryRequest(
     [Required][MaxLength(200)] string Title,
     [Required][ValidLoreCategory] string Category,
     [Required][MinLength(50)][MaxLength(8000)] string Body
