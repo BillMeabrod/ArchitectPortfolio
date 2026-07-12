@@ -26,7 +26,7 @@ public class QdrantLoreAdapter : ILoreRepository
         var isHttps = uri.Scheme == "https";
         var defaultPort = isHttps ? 443 : 80;
         var port = uri.Port > 0 && uri.Port != defaultPort ? uri.Port : defaultPort;
-        
+
         _qdrant = new QdrantClient(
             host: uri.Host,
             port: port,
@@ -42,64 +42,40 @@ public class QdrantLoreAdapter : ILoreRepository
         await using var conn = new NpgsqlConnection(_dbConnectionString);
         await conn.OpenAsync();
 
-        if (entry.Id == 0)
-        {
-            var cmd = new NpgsqlCommand(
-                """
-                INSERT INTO lore_entry (title, category, body, created_at, updated_at)
-                VALUES (@title, @category, @body, NOW(), NOW())
-                RETURNING id, created_at, updated_at
-                """, conn);
-
-            cmd.Parameters.AddWithValue("title", entry.Title);
-            cmd.Parameters.AddWithValue("category", entry.Category);
-            cmd.Parameters.AddWithValue("body", entry.Body);
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            await reader.ReadAsync();
-            entry.Id = reader.GetInt32(0);
-            entry.CreatedAt = reader.GetFieldValue<DateTimeOffset>(1);
-            entry.UpdatedAt = reader.GetFieldValue<DateTimeOffset>(2);
-        }
-        else
-        {
-            var cmd = new NpgsqlCommand(
-                """
-                UPDATE lore_entry
-                SET title = @title, category = @category, body = @body, updated_at = NOW()
-                WHERE id = @id
-                RETURNING updated_at
-                """, conn);
-
-            cmd.Parameters.AddWithValue("id", entry.Id);
-            cmd.Parameters.AddWithValue("title", entry.Title);
-            cmd.Parameters.AddWithValue("category", entry.Category);
-            cmd.Parameters.AddWithValue("body", entry.Body);
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (!await reader.ReadAsync())
-                throw new InvalidOperationException($"Lore entry with ID {entry.Id} does not exist.");
-            entry.UpdatedAt = reader.GetFieldValue<DateTimeOffset>(0);
-        }
+        entry = await UpsertPostgresAsync(conn, entry);
 
         var vector = await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}");
-
-        await _qdrant.UpsertAsync(_collectionName, [
-            new PointStruct
-            {
-                Id = (ulong)entry.Id,
-                Vectors = vector,
-                Payload =
-                {
-                    ["postgres_id"] = entry.Id,
-                    ["title"] = entry.Title,
-                    ["category"] = entry.Category,
-                    ["body"] = entry.Body
-                }
-            }
-        ]);
+        await _qdrant.UpsertAsync(_collectionName, [BuildPoint(entry, vector)]);
 
         return entry;
+    }
+
+    public async Task<IReadOnlyList<LoreEntry>> SaveBulkAsync(IReadOnlyList<LoreEntry> entries)
+    {
+        await EnsureCollectionExistsAsync();
+
+        await using var conn = new NpgsqlConnection(_dbConnectionString);
+        await conn.OpenAsync();
+
+        var saved = new List<LoreEntry>(entries.Count);
+        await using (var tx = await conn.BeginTransactionAsync())
+        {
+            foreach (var entry in entries)
+                saved.Add(await UpsertPostgresAsync(conn, entry, tx));
+
+            await tx.CommitAsync();
+        }
+
+        var points = new List<PointStruct>(saved.Count);
+        foreach (var entry in saved)
+        {
+            var vector = await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}");
+            points.Add(BuildPoint(entry, vector));
+        }
+
+        await _qdrant.UpsertAsync(_collectionName, points);
+
+        return saved;
     }
 
     public async Task<LoreEntry?> GetByIdAsync(int id)
@@ -170,6 +146,64 @@ public class QdrantLoreAdapter : ILoreRepository
         });
     }
 
+    private async Task<LoreEntry> UpsertPostgresAsync(NpgsqlConnection conn, LoreEntry entry, NpgsqlTransaction? tx = null)
+    {
+        if (entry.Id == 0)
+        {
+            var cmd = new NpgsqlCommand(
+                """
+                INSERT INTO lore_entry (title, category, body, created_at, updated_at)
+                VALUES (@title, @category, @body, NOW(), NOW())
+                RETURNING id, created_at, updated_at
+                """, conn, tx);
+
+            cmd.Parameters.AddWithValue("title", entry.Title);
+            cmd.Parameters.AddWithValue("category", entry.Category);
+            cmd.Parameters.AddWithValue("body", entry.Body);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            entry.Id = reader.GetInt32(0);
+            entry.CreatedAt = reader.GetFieldValue<DateTimeOffset>(1);
+            entry.UpdatedAt = reader.GetFieldValue<DateTimeOffset>(2);
+        }
+        else
+        {
+            var cmd = new NpgsqlCommand(
+                """
+                UPDATE lore_entry
+                SET title = @title, category = @category, body = @body, updated_at = NOW()
+                WHERE id = @id
+                RETURNING updated_at
+                """, conn, tx);
+
+            cmd.Parameters.AddWithValue("id", entry.Id);
+            cmd.Parameters.AddWithValue("title", entry.Title);
+            cmd.Parameters.AddWithValue("category", entry.Category);
+            cmd.Parameters.AddWithValue("body", entry.Body);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                throw new InvalidOperationException($"Lore entry with ID {entry.Id} does not exist.");
+            entry.UpdatedAt = reader.GetFieldValue<DateTimeOffset>(0);
+        }
+
+        return entry;
+    }
+
+    private static PointStruct BuildPoint(LoreEntry entry, float[] vector) => new()
+    {
+        Id = (ulong)entry.Id,
+        Vectors = vector,
+        Payload =
+        {
+            ["postgres_id"] = entry.Id,
+            ["title"] = entry.Title,
+            ["category"] = entry.Category,
+            ["body"] = entry.Body
+        }
+    };
+
     private async Task EnsureCollectionExistsAsync()
     {
         var collections = await _qdrant.ListCollectionsAsync();
@@ -192,27 +226,27 @@ public class QdrantLoreAdapter : ILoreRepository
         Body = reader.GetString(3),
         CreatedAt = reader.GetFieldValue<DateTimeOffset>(4),
         UpdatedAt = reader.GetFieldValue<DateTimeOffset>(5)
-    }; 
-    
+    };
+
     private static string NormalizeConnectionString(string connectionString)
     {
         if (!connectionString.StartsWith("postgresql://") && !connectionString.StartsWith("postgres://"))
-            return connectionString; // already key-value format
+            return connectionString;
 
         var uri = new Uri(connectionString);
         var username = Uri.UnescapeDataString(uri.UserInfo.Split(':')[0]);
-        var password = uri.UserInfo.Contains(':') 
+        var password = uri.UserInfo.Contains(':')
             ? Uri.UnescapeDataString(uri.UserInfo.Substring(uri.UserInfo.IndexOf(':') + 1))
             : "";
-        
-        var builder = new Npgsql.NpgsqlConnectionStringBuilder
+
+        var builder = new NpgsqlConnectionStringBuilder
         {
             Host = uri.Host,
             Port = uri.Port > 0 ? uri.Port : 5432,
             Username = username,
             Password = password,
             Database = uri.AbsolutePath.TrimStart('/'),
-            SslMode = Npgsql.SslMode.Require
+            SslMode = SslMode.Require
         };
         return builder.ConnectionString;
     }
