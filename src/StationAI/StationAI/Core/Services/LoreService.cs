@@ -61,8 +61,8 @@ public class LoreService : ILoreService
         if (existing is null)
             return false;
 
-        await _loreStoreRepository.DeleteAsync(id);
         await _loreRepository.DeleteAsync(id);
+        await _loreStoreRepository.DeleteAsync(id);
         return true;
     }
 
