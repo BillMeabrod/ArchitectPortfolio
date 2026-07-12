@@ -12,17 +12,13 @@ namespace StationAI.Adapters.Inbound
     {
         private readonly IStationDirectiveService _stationDirectiveService;
         private readonly IStationDirectiveRepository _stationDirectiveRepository;
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<StationDirectiveController> _logger;
 
         public StationDirectiveController(
             IStationDirectiveRepository stationDirectiveRepository,
-            IStationDirectiveService stationDirectiveService,
-            ILogger<StationDirectiveController> logger)
+            IStationDirectiveService stationDirectiveService)
         {
             _stationDirectiveRepository = stationDirectiveRepository;
             _stationDirectiveService = stationDirectiveService;
-            _logger = logger;
         }
 
         [HttpGet]
