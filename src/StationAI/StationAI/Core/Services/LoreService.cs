@@ -7,10 +7,15 @@ namespace StationAI.Core.Services;
 public class LoreService : ILoreService
 {
     private readonly ILoreRepository _loreRepository;
+    private readonly ILoreStoreRepository _loreStoreRepository;
     private readonly ILogger<LoreService> _logger;
 
-    public LoreService(ILoreRepository loreRepository, ILogger<LoreService> logger)
+    public LoreService(
+        ILoreStoreRepository loreStoreRepository,
+        ILoreRepository loreRepository,
+        ILogger<LoreService> logger)
     {
+        _loreStoreRepository = loreStoreRepository;
         _loreRepository = loreRepository;
         _logger = logger;
     }
@@ -24,18 +29,20 @@ public class LoreService : ILoreService
             Body = body
         };
 
-        return await _loreRepository.SaveAsync(entry);
+        var saved = await _loreStoreRepository.SaveAsync(entry);
+        await _loreRepository.UpsertAsync(saved);
+        return saved;
     }
 
     public Task<LoreEntry?> GetByIdAsync(int id) =>
-        _loreRepository.GetByIdAsync(id);
+        _loreStoreRepository.GetByIdAsync(id);
 
     public Task<IEnumerable<LoreEntry>> GetAllAsync() =>
-        _loreRepository.GetAllAsync();
+        _loreStoreRepository.GetAllAsync();
 
     public async Task<LoreEntry?> UpdateAsync(int id, string title, string category, string body)
     {
-        var existing = await _loreRepository.GetByIdAsync(id);
+        var existing = await _loreStoreRepository.GetByIdAsync(id);
         if (existing is null)
             return null;
 
@@ -43,15 +50,18 @@ public class LoreService : ILoreService
         existing.Category = category.ToLowerInvariant();
         existing.Body = body;
 
-        return await _loreRepository.SaveAsync(existing);
+        var saved = await _loreStoreRepository.SaveAsync(existing);
+        await _loreRepository.UpsertAsync(saved);
+        return saved;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var existing = await _loreRepository.GetByIdAsync(id);
+        var existing = await _loreStoreRepository.GetByIdAsync(id);
         if (existing is null)
             return false;
 
+        await _loreStoreRepository.DeleteAsync(id);
         await _loreRepository.DeleteAsync(id);
         return true;
     }
@@ -80,7 +90,8 @@ public class LoreService : ILoreService
 
         if (toSave.Count > 0)
         {
-            var saved = await _loreRepository.SaveBulkAsync(toSave);
+            var saved = await _loreStoreRepository.SaveBulkAsync(toSave);
+            await _loreRepository.UpsertBulkAsync(saved);
             result.Succeeded = saved.Count;
 
             _logger.LogInformation(

@@ -46,10 +46,15 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddSingleton<IEmbeddingService, GoogleEmbeddingAdapter>();
 
-builder.Services.AddSingleton<ILoreRepository>(sp =>
+builder.Services.AddSingleton<ILoreStoreRepository>(sp =>
 {
     var dbUrl = builder.Configuration.GetConnectionString("DatabaseUrl")
         ?? throw new InvalidOperationException("DatabaseUrl connection string is required");
+    return new PostgresLoreAdapter(dbUrl);
+});
+
+builder.Services.AddSingleton<ILoreRepository>(sp =>
+{
     var qdrantUrl = builder.Configuration["Qdrant:Url"]
         ?? throw new InvalidOperationException("Qdrant:Url configuration is required");
     var qdrantApiKey = builder.Configuration["Qdrant:ApiKey"]
@@ -58,7 +63,7 @@ builder.Services.AddSingleton<ILoreRepository>(sp =>
 
     var collectionName = builder.Configuration["Qdrant:Collection"] ?? "station-lore";
 
-    return new QdrantLoreAdapter(dbUrl, qdrantUrl, qdrantApiKey, collectionName, embeddingService);
+    return new QdrantLoreAdapter(qdrantUrl, qdrantApiKey, collectionName, embeddingService);
 });
 
 var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStorageConnection")
