@@ -46,11 +46,12 @@ public class QdrantLoreAdapter : ILoreRepository
     {
         await EnsureCollectionExistsAsync();
 
+        if (entries.Any(e => e.Id == 0))
+            throw new InvalidOperationException("All lore entries must have IDs before upserting to Qdrant.");
+
         var vectors = new List<float[]>(entries.Count);
         foreach (var entry in entries)
             vectors.Add(await _embeddingService.GetEmbeddingAsync($"{entry.Title}. {entry.Body}"));
-        if (entries.Any(e => e.Id == 0))
-            throw new InvalidOperationException("All lore entries must have IDs before upserting to Qdrant.");
 
         var points = new List<PointStruct>(entries.Count);
         for (var i = 0; i < entries.Count; i++)
