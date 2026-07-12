@@ -65,6 +65,7 @@ var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStora
     ?? throw new InvalidOperationException("BlobStorageConnection connection string is not set. Fix your configuration.");
 
 builder.Services.AddSingleton(new BlobServiceClient(blobStorageConnection));
+builder.Services.AddScoped<ILoreService, LoreService>();
 builder.Services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>();
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
 builder.Services.AddScoped<IDirectiveParsingService, DirectiveParsingService>();
