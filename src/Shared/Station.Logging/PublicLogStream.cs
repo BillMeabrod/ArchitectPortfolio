@@ -67,8 +67,10 @@ public class PublicLogStream : IPublicLogStream
     private void AddToHistory(LogEntry entry)
     {
         _history.Enqueue(entry);
-        while (_history.Count > Capacity)
-            _history.TryDequeue(out _);
+
+        var count = _history.Count;
+        while (count > Capacity && _history.TryDequeue(out _))
+            count--;
     }
 
     private void ScheduleSave()
