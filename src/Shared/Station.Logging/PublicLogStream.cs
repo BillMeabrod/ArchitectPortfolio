@@ -38,6 +38,7 @@ public class PublicLogStream : IPublicLogStream
         }
 
         ScheduleSave();
+    }
 
     public IReadOnlyList<LogEntry> GetHistory() => _history.ToArray();
 
