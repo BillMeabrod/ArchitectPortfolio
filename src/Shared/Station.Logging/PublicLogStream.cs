@@ -21,10 +21,11 @@ public class PublicLogStream : IPublicLogStream
         while (_history.Count > Capacity)
             _history.TryDequeue(out _);
 
+        List<Action<LogEntry>> subscribers;
         lock (_lock)
-            foreach (var subscriber in _subscribers)
-                subscriber(entry);
-
+            subscribers = new List<Action<LogEntry>>(_subscribers);
+        foreach (var subscriber in subscribers)
+            subscriber(entry);
         _ = _persistence.SaveAsync(GetHistory());
     }
 
