@@ -50,7 +50,7 @@ public class StationLoggingTests
         persistence.ReleaseFirstSave();
 
         await persistence.SecondSaveStarted.WaitAsync(TimeSpan.FromSeconds(5));
-        await Task.Delay(100);
+        await persistence.SecondSaveCompleted.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(2, persistence.SaveCallCount);
     }
@@ -139,6 +139,7 @@ public class StationLoggingTests
         private readonly TaskCompletionSource _firstSaveStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseFirstSave = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _secondSaveStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _secondSaveCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public BlockingPublicLogPersistence()
             : base(new BlobServiceClient(new Uri("https://example.com")), "station-ai")
@@ -147,6 +148,7 @@ public class StationLoggingTests
 
         public Task FirstSaveStarted => _firstSaveStarted.Task;
         public Task SecondSaveStarted => _secondSaveStarted.Task;
+        public Task SecondSaveCompleted => _secondSaveCompleted.Task;
         public int SaveCallCount { get; private set; }
 
         public override async Task SaveAsync(IReadOnlyList<LogEntry> entries)
@@ -161,7 +163,10 @@ public class StationLoggingTests
             }
 
             if (SaveCallCount == 2)
+            {
                 _secondSaveStarted.TrySetResult();
+                _secondSaveCompleted.TrySetResult();
+            }
         }
 
         public void ReleaseFirstSave() => _releaseFirstSave.TrySetResult();
