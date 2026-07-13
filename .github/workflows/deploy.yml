@@ -70,7 +70,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Add GitHub Packages source
-        run: dotnet nuget add source --username YOURUSERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/YOURUSERNAME/index.json"
+        run: dotnet nuget add source --username BillMeabrod --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/BillMeabrod/index.json"
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -100,7 +100,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Add GitHub Packages source
-        run: dotnet nuget add source --username YOURUSERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/YOURUSERNAME/index.json"
+        run: dotnet nuget add source --username BillMeabrod --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/BillMeabrod/index.json"
       - name: Azure Login
         uses: azure/login@v2
         with:

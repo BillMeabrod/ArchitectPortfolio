@@ -4,10 +4,19 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>Station.Logging</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>BillMeabrod</Authors>
+    <Description>Shared logging infrastructure for the Meabrod Station portfolio project. Provides a dual-destination logger that writes to both the standard ILogger pipeline and an opt-in public SSE stream.</Description>
+    <RepositoryUrl>https://github.com/BillMeabrod/ArchitectPortfolio</RepositoryUrl>
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
   </ItemGroup>
 
 </Project>
