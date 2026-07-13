@@ -38,6 +38,7 @@ public class PublicLogPersistence
         await _lock.WaitAsync();
         try
         {
+            await _container.CreateIfNotExistsAsync();
             var json = JsonSerializer.Serialize(entries);
             await _blob.UploadAsync(BinaryData.FromString(json), overwrite: true);
         }
