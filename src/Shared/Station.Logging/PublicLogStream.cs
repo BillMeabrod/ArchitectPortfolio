@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace Station.Logging;
 
@@ -8,36 +9,32 @@ public class PublicLogStream : IPublicLogStream
     private readonly ConcurrentQueue<LogEntry> _history = new();
     private readonly List<Action<LogEntry>> _subscribers = new();
     private readonly Lock _lock = new();
-    private readonly Lock _saveLock = new();
     private readonly PublicLogPersistence _persistence;
-    private Task _saveTask = Task.CompletedTask;
-    private bool _savePending;
+    private readonly Channel<bool> _saveSignal = Channel.CreateBounded<bool>(
+        new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
 
     public PublicLogStream(PublicLogPersistence persistence)
     {
         _persistence = persistence;
+        _ = Task.Run(SaveLoopAsync);
     }
 
     public void Publish(LogEntry entry)
     {
         AddToHistory(entry);
 
-        List<Action<LogEntry>> subscribers;
+        List<Action<LogEntry>> snapshot;
         lock (_lock)
-            subscribers = new List<Action<LogEntry>>(_subscribers);
-        foreach (var subscriber in subscribers)
+            snapshot = new List<Action<LogEntry>>(_subscribers);
+
+        foreach (var subscriber in snapshot)
         {
             try
-            {
-                subscriber(entry);
-            }
-            catch
-            {
-                // Intentionally ignore subscriber failures to avoid breaking the log pipeline.
-            }
+            { subscriber(entry); }
+            catch { }
         }
 
-        ScheduleSave();
+        _saveSignal.Writer.TryWrite(true);
     }
 
     public IReadOnlyList<LogEntry> GetHistory() => _history.ToArray();
@@ -60,50 +57,25 @@ public class PublicLogStream : IPublicLogStream
         });
     }
 
-    private sealed class Subscription(Action onDispose) : IDisposable
-    {
-        public void Dispose() => onDispose();
-    }
-
     private void AddToHistory(LogEntry entry)
     {
         _history.Enqueue(entry);
-
-        var count = _history.Count;
-        while (count > Capacity && _history.TryDequeue(out _))
-            count--;
+        while (_history.Count > Capacity)
+            _history.TryDequeue(out _);
     }
 
-    private void ScheduleSave()
+    private async Task SaveLoopAsync()
     {
-        lock (_saveLock)
+        await foreach (var _ in _saveSignal.Reader.ReadAllAsync())
         {
-            if (_saveTask.IsCompleted)
-            {
-                _saveTask = PersistHistoryAsync();
-                return;
-            }
-
-            _savePending = true;
+            try
+            { await _persistence.SaveAsync(GetHistory()); }
+            catch { }
         }
     }
 
-    private async Task PersistHistoryAsync()
+    private sealed class Subscription(Action onDispose) : IDisposable
     {
-        while (true)
-        {
-            await _persistence.SaveAsync(GetHistory());
-
-            lock (_saveLock)
-            {
-                if (!_savePending)
-                {
-                    _saveTask = Task.CompletedTask;
-                    return;
-                }
-
-                _savePending = false;
-            }
-        }
+        public void Dispose() => onDispose();
     }
 }
