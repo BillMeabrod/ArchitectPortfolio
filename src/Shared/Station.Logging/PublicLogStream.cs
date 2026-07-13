@@ -81,14 +81,7 @@ public class PublicLogStream : IPublicLogStream
     {
         while (true)
         {
-            try
-            {
-                await _persistence.SaveAsync(GetHistory());
-            }
-            catch
-            {
-                // The public log stream should remain available even if blob persistence is temporarily unavailable.
-            }
+            await _persistence.SaveAsync(GetHistory());
 
             lock (_saveLock)
             {
