@@ -26,10 +26,18 @@ public class PublicLogStream : IPublicLogStream
         lock (_lock)
             subscribers = new List<Action<LogEntry>>(_subscribers);
         foreach (var subscriber in subscribers)
-            subscriber(entry);
+        {
+            try
+            {
+                subscriber(entry);
+            }
+            catch
+            {
+                // Intentionally ignore subscriber failures to avoid breaking the log pipeline.
+            }
+        }
 
         ScheduleSave();
-    }
 
     public IReadOnlyList<LogEntry> GetHistory() => _history.ToArray();
 
