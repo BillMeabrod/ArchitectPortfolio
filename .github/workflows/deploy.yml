@@ -38,9 +38,30 @@ jobs:
           DEBUG: 'True'
         run: pytest
 
+  publish-logging-package:
+    name: Publish Station.Logging
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Add GitHub Packages source
+        run: dotnet nuget add source --username BillMeabrod --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/BillMeabrod/index.json"
+
+      - name: Pack
+        run: dotnet pack src/Shared/Station.Logging/Station.Logging.csproj -c Release -o ./artifacts
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push "./artifacts/*.nupkg" --source "github" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
   deploy-manifest-logger:
     name: Deploy ManifestLogger
-    needs: test
+    needs: publish-logging-package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +69,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Add GitHub Packages source
+        run: dotnet nuget add source --username BillMeabrod --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/BillMeabrod/index.json"
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -68,7 +91,7 @@ jobs:
 
   deploy-station-ai:
     name: Deploy StationAI
-    needs: test
+    needs: publish-logging-package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +99,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Add GitHub Packages source
+        run: dotnet nuget add source --username BillMeabrod --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/BillMeabrod/index.json"
       - name: Azure Login
         uses: azure/login@v2
         with:

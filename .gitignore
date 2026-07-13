@@ -76,3 +76,4 @@ nunit-*.xml
 /.vs
 /src/ArchitectPortfolio.AppHost/Properties/launchSettings.json
 /src/ArchitectPortfolio.AppHost/appsettings.Development.json
+/src/Shared/Station.Logging/.vs
