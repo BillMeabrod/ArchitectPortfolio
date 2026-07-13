@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Station.Logging;
@@ -52,11 +53,69 @@ public class StationLogger<T> : IStationLogger<T>
         if (args.Length == 0)
             return template;
 
-        int index = 0;
-        var positional = NamedPlaceholder.Replace(template, _ => $"{{{index++}}}");
-
         try
-        { return string.Format(positional, args); }
+        { return string.Format(ConvertNamedPlaceholders(template), args); }
         catch { return template; }
     }
+
+    private static string ConvertNamedPlaceholders(string template)
+    {
+        if (!NamedPlaceholder.IsMatch(template))
+            return template;
+
+        Dictionary<string, int> placeholderIndexes = [];
+        StringBuilder builder = new(template.Length);
+        int nextIndex = 0;
+
+        for (int i = 0; i < template.Length; i++)
+        {
+            if (template[i] == '{')
+            {
+                if (IsEscapedBrace(template, i))
+                {
+                    builder.Append("{{");
+                    i++;
+                    continue;
+                }
+
+                int end = template.IndexOf('}', i + 1);
+                if (end < 0)
+                    return template;
+
+                var placeholder = template[(i + 1)..end];
+                if (placeholder.Length == 0 || placeholder.IndexOf('{') >= 0)
+                    return template;
+
+                int suffixIndex = placeholder.IndexOfAny([',', ':']);
+                var placeholderName = suffixIndex >= 0
+                    ? placeholder[..suffixIndex]
+                    : placeholder;
+
+                if (!placeholderIndexes.TryGetValue(placeholderName, out var index))
+                    placeholderIndexes[placeholderName] = index = nextIndex++;
+
+                builder.Append('{').Append(index);
+                if (suffixIndex >= 0)
+                    builder.Append(placeholder.AsSpan(suffixIndex));
+                builder.Append('}');
+                i = end;
+                continue;
+            }
+
+            if (template[i] == '}' && IsEscapedBrace(template, i))
+            {
+                builder.Append("}}");
+                i++;
+                continue;
+            }
+
+            builder.Append(template[i]);
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool IsEscapedBrace(string template, int index) =>
+        index + 1 < template.Length &&
+        template[index + 1] == template[index];
 }

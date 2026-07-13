@@ -15,7 +15,7 @@ public class PublicLogPersistence
         _blob = _container.GetBlobClient($"{appName}.json");
     }
 
-    public async Task<List<LogEntry>> LoadAsync()
+    public virtual async Task<List<LogEntry>> LoadAsync()
     {
         try
         {
@@ -33,7 +33,7 @@ public class PublicLogPersistence
         }
     }
 
-    public async Task SaveAsync(IReadOnlyList<LogEntry> entries)
+    public virtual async Task SaveAsync(IReadOnlyList<LogEntry> entries)
     {
         await _lock.WaitAsync();
         try

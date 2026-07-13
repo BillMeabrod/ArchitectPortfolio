@@ -8,7 +8,10 @@ public class PublicLogStream : IPublicLogStream
     private readonly ConcurrentQueue<LogEntry> _history = new();
     private readonly List<Action<LogEntry>> _subscribers = new();
     private readonly Lock _lock = new();
+    private readonly Lock _saveLock = new();
     private readonly PublicLogPersistence _persistence;
+    private Task _saveTask = Task.CompletedTask;
+    private bool _savePending;
 
     public PublicLogStream(PublicLogPersistence persistence)
     {
@@ -17,19 +20,24 @@ public class PublicLogStream : IPublicLogStream
 
     public void Publish(LogEntry entry)
     {
-        _history.Enqueue(entry);
-        while (_history.Count > Capacity)
-            _history.TryDequeue(out _);
+        AddToHistory(entry);
 
         List<Action<LogEntry>> subscribers;
         lock (_lock)
             subscribers = new List<Action<LogEntry>>(_subscribers);
         foreach (var subscriber in subscribers)
             subscriber(entry);
-        _ = _persistence.SaveAsync(GetHistory());
+
+        ScheduleSave();
     }
 
     public IReadOnlyList<LogEntry> GetHistory() => _history.ToArray();
+
+    public void SeedHistory(IEnumerable<LogEntry> history)
+    {
+        foreach (var entry in history)
+            AddToHistory(entry);
+    }
 
     public IDisposable Subscribe(Action<LogEntry> handler)
     {
@@ -46,5 +54,49 @@ public class PublicLogStream : IPublicLogStream
     private sealed class Subscription(Action onDispose) : IDisposable
     {
         public void Dispose() => onDispose();
+    }
+
+    private void AddToHistory(LogEntry entry)
+    {
+        _history.Enqueue(entry);
+        while (_history.Count > Capacity)
+            _history.TryDequeue(out _);
+    }
+
+    private void ScheduleSave()
+    {
+        lock (_saveLock)
+        {
+            if (_saveTask.IsCompleted)
+            {
+                _saveTask = PersistHistoryAsync();
+                return;
+            }
+
+            _savePending = true;
+        }
+    }
+
+    private async Task PersistHistoryAsync()
+    {
+        while (true)
+        {
+            try
+            {
+                await _persistence.SaveAsync(GetHistory());
+            }
+            catch { }
+
+            lock (_saveLock)
+            {
+                if (!_savePending)
+                {
+                    _saveTask = Task.CompletedTask;
+                    return;
+                }
+
+                _savePending = false;
+            }
+        }
     }
 }

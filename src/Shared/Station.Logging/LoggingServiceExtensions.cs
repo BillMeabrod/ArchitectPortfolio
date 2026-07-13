@@ -32,8 +32,7 @@ public static class LoggingServiceExtensions
         var stream = services.GetRequiredService<PublicLogStream>();
 
         var history = await persistence.LoadAsync();
-        foreach (var entry in history)
-            stream.Publish(entry);
+        stream.SeedHistory(history);
     }
 }
 
