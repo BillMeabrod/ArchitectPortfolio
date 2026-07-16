@@ -24,7 +24,7 @@ namespace StationAI.Core.Services
             var moderationService = scope.ServiceProvider.GetRequiredService<IModerationService>();
             var stationDirectiveRepository = scope.ServiceProvider.GetRequiredService<IStationDirectiveRepository>();
 
-            _log.Info("Station directive saved — running content moderation")
+            _log.Info("Station directive received — running content moderation")
                 .Public();
 
             bool moderationRejected = await moderationService.IsRejectedByModerationAsync(directive);
