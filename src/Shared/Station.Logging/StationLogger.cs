@@ -69,15 +69,26 @@ public class StationLogger<T> : IStationLogger<T>
     // in Azure Monitor, enabling field-level querying. string.Format requires positional
     // placeholders ({0}, {1}). We convert here so the public stream gets a fully interpolated
     // string while ILogger retains its structured format above.
-    // Double braces ({{...}}) are ILogger's escape syntax for literal braces. The regex skips
-    // them via negative lookaround, so string.Format renders them correctly as { and }.
+    // Double braces ({{...}}) are ILogger's escape syntax for literal braces and are skipped
+    // by the regex, so string.Format renders them correctly as { and }.
+    // A repeated placeholder name (e.g. {Callsign} appearing twice) maps to the same argument
+    // index, matching the caller's expectation that one argument fills every occurrence.
     private static string Format(string template, object?[] args)
     {
         if (args.Length == 0)
             return template;
 
-        int index = 0;
-        var positional = NamedPlaceholder.Replace(template, _ => $"{{{index++}}}");
+        var indexByName = new Dictionary<string, int>();
+
+        var positional = NamedPlaceholder.Replace(template, match =>
+        {
+            if (!indexByName.TryGetValue(match.Value, out var index))
+            {
+                index = indexByName.Count;
+                indexByName[match.Value] = index;
+            }
+            return $"{{{index}}}";
+        });
 
         try
         { return string.Format(positional, args); }
