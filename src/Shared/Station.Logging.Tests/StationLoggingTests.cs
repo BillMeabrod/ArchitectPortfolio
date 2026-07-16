@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -102,6 +103,52 @@ public class StationLoggingTests
         Assert.Equal("INFO", entry.Level);
         Assert.Equal("StationAI", entry.Source);
         Assert.Equal("corr-123", entry.CorrelationId);
+    }
+
+    [Fact]
+    public void HttpPublicLogStream_GetHistory_ReturnsEmpty()
+    {
+        var stream = new HttpPublicLogStream("https://example.com");
+
+        Assert.Empty(stream.GetHistory());
+    }
+
+    [Fact]
+    public void HttpPublicLogStream_Subscribe_ReturnsNoOpDisposable()
+    {
+        var stream = new HttpPublicLogStream("https://example.com");
+        var callCount = 0;
+
+        var subscription = stream.Subscribe(_ => callCount++);
+        stream.Publish(new LogEntry { Message = "test", Source = "ARIA" });
+        subscription.Dispose();
+
+        Assert.Equal(0, callCount);
+    }
+
+    [Fact]
+    public void AddStationLoggingForwarder_RegistersHttpPublicLogStream()
+    {
+        var services = new ServiceCollection();
+        services.AddStationLoggingForwarder("https://example.com", "ARIA");
+
+        var provider = services.BuildServiceProvider();
+        var stream = provider.GetRequiredService<IPublicLogStream>();
+
+        Assert.IsType<HttpPublicLogStream>(stream);
+    }
+
+    [Fact]
+    public void AddStationLoggingForwarder_ResolvesIStationLogger()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddStationLoggingForwarder("https://example.com", "ARIA");
+
+        var provider = services.BuildServiceProvider();
+        var logger = provider.GetRequiredService<IStationLogger<StationLoggingTests>>();
+
+        Assert.NotNull(logger);
     }
 
     private sealed class RecordingPublicLogStream : IPublicLogStream

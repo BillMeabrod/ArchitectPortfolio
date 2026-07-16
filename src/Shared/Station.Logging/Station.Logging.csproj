@@ -5,9 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Station.Logging</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>BillMeabrod</Authors>
-    <Description>Shared logging infrastructure for the Meabrod Station portfolio project. Provides a dual-destination logger that writes to both the standard ILogger pipeline and an opt-in public SSE stream.</Description>
+    <Description>Shared logging infrastructure for the Meabrod Station portfolio project. Provides a dual-destination logger that writes to both the standard ILogger pipeline and an opt-in public SSE stream. Supports both in-memory stream ownership and HTTP forwarding for multi-process deployments.</Description>
     <RepositoryUrl>https://github.com/BillMeabrod/ArchitectPortfolio</RepositoryUrl>
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>

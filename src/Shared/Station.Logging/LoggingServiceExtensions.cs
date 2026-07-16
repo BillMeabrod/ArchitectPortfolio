@@ -5,6 +5,11 @@ namespace Station.Logging;
 
 public static class LoggingServiceExtensions
 {
+    /// <summary>
+    /// Registers the full in-memory public log stream with blob persistence and IStationLogger.
+    /// Use this in the process that owns the stream and serves the SSE endpoint.
+    /// Call WarmPublicLogStreamAsync after app.Build() to restore history from blob storage.
+    /// </summary>
     public static IServiceCollection AddStationLogging(
         this IServiceCollection services,
         string appName,
@@ -20,7 +25,23 @@ public static class LoggingServiceExtensions
             sp.GetRequiredService<PublicLogStream>());
 
         services.AddSingleton(new StationLoggerSource(source));
+        services.AddTransient(typeof(IStationLogger<>), typeof(StationLogger<>));
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers an HTTP forwarder as IPublicLogStream and IStationLogger.
+    /// Use this in processes that don't own the stream (e.g. a Functions host alongside an API).
+    /// Log entries are forwarded to the target API's POST /api/logs/ingest endpoint.
+    /// </summary>
+    public static IServiceCollection AddStationLoggingForwarder(
+        this IServiceCollection services,
+        string apiBaseUrl,
+        string source)
+    {
+        services.AddSingleton<IPublicLogStream>(new HttpPublicLogStream(apiBaseUrl));
+        services.AddSingleton(new StationLoggerSource(source));
         services.AddTransient(typeof(IStationLogger<>), typeof(StationLogger<>));
 
         return services;
