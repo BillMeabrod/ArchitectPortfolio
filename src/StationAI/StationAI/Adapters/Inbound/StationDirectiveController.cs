@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Station.Logging;
 using StationAI.Core;
 using StationAI.Core.Interfaces;
 using System.ComponentModel.DataAnnotations;
@@ -12,16 +13,16 @@ namespace StationAI.Adapters.Inbound
     {
         private readonly IStationDirectiveService _stationDirectiveService;
         private readonly IStationDirectiveRepository _stationDirectiveRepository;
-        private readonly ILogger<StationDirectiveController> _logger;
+        private readonly IStationLogger<StationDirectiveController> _log;
 
         public StationDirectiveController(
             IStationDirectiveRepository stationDirectiveRepository,
             IStationDirectiveService stationDirectiveService,
-            ILogger<StationDirectiveController> logger)
+            IStationLogger<StationDirectiveController> log)
         {
             _stationDirectiveRepository = stationDirectiveRepository;
             _stationDirectiveService = stationDirectiveService;
-            _logger = logger;
+            _log = log;
         }
 
         [HttpGet]
@@ -49,12 +50,12 @@ namespace StationAI.Adapters.Inbound
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Background directive processing failed.");
+                    _log.Error(ex, "Background directive processing failed.");
                 }
             });
 
             return Ok();
-        }        
+        }
     }
 
     public record SaveDirectiveRequest(
