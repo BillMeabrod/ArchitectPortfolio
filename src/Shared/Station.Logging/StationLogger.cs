@@ -10,7 +10,8 @@ public class StationLogger<T> : IStationLogger<T>
     private readonly string _source;
 
     // Matches ILogger-style named placeholders e.g. {Callsign}, {BiohazardLevel}
-    private static readonly Regex NamedPlaceholder = new(@"\{[^}]+\}", RegexOptions.Compiled);
+    // Negative lookbehind/lookahead ensures double-brace escapes {{ }} are not matched
+    private static readonly Regex NamedPlaceholder = new(@"(?<!\{)\{(?!\{)[^}]+\}(?!\})", RegexOptions.Compiled);
 
     public StationLogger(ILogger<T> logger, IPublicLogStream stream, StationLoggerSource source)
     {
@@ -68,6 +69,8 @@ public class StationLogger<T> : IStationLogger<T>
     // in Azure Monitor, enabling field-level querying. string.Format requires positional
     // placeholders ({0}, {1}). We convert here so the public stream gets a fully interpolated
     // string while ILogger retains its structured format above.
+    // Double braces ({{...}}) are ILogger's escape syntax for literal braces. The regex skips
+    // them via negative lookaround, so string.Format renders them correctly as { and }.
     private static string Format(string template, object?[] args)
     {
         if (args.Length == 0)
