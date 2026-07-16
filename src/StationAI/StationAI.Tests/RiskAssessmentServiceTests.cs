@@ -3,7 +3,7 @@ using Xunit;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
-using Microsoft.Extensions.Logging;
+using Station.Logging;
 using System.Text.Json;
 
 namespace StationAI.Tests;
@@ -14,7 +14,7 @@ public class RiskAssessmentServiceTests
     private readonly Mock<IStationDirectiveRepository> _rulesRepo = new();
     private readonly Mock<ILoreRepository> _loreRepo = new();
     private readonly Mock<IDirectiveTargetRepository> _directiveTargetRepo = new();
-    private readonly Mock<ILogger<RiskAssessmentService>> _logger = new();
+    private readonly Mock<IStationLogger<RiskAssessmentService>> _log = new();
     private readonly RiskAssessmentService _sut;
 
     private static readonly ShipManifest TestManifest = new()
@@ -23,7 +23,8 @@ public class RiskAssessmentServiceTests
         Callsign = "SG-01",
         CaptainName = "Picard",
         CargoItems = ["dilithium"],
-        Passengers = ["Data"]
+        Passengers = ["Data"],
+        CorrelationId = "abc12345"
     };
 
     private static string ValidAssessmentJson(int bio = 0, int chem = 0, int sec = 1) =>
@@ -47,7 +48,7 @@ public class RiskAssessmentServiceTests
             _rulesRepo.Object,
             _loreRepo.Object,
             _directiveTargetRepo.Object,
-            _logger.Object);
+            _log.Object);
     }
 
     [Fact]

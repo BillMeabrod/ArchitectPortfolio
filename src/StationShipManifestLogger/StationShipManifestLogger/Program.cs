@@ -1,6 +1,8 @@
+using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Station.Logging;
 using StationShipManifestLogger.Common.Data;
 using StationShipManifestLogger.Features.Docking;
 using System.Threading.RateLimiting;
@@ -12,7 +14,9 @@ builder.Services.AddDbContext<ManifestLoggerDbContext>(options =>
 
 var azureStorageConnection = builder.Configuration.GetConnectionString("AzureStorageConnection")
     ?? throw new InvalidOperationException("AzureStorageConnection connection string is not set. Fix your configuration.");
+
 builder.Services.AddSingleton(new QueueServiceClient(azureStorageConnection));
+builder.Services.AddSingleton(new BlobServiceClient(azureStorageConnection));
 builder.Services.AddScoped<ShipManifestQueuePublisher>();
 builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg =>
@@ -29,6 +33,8 @@ builder.Services.AddRateLimiter(options =>
     });
     options.RejectionStatusCode = 429;
 });
+
+builder.Services.AddStationLogging("manifest-logger", "MANIFEST");
 
 builder.Services.AddCors(options =>
 {
@@ -50,11 +56,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
-app.UseHttpsRedirection();
 
+await app.Services.WarmPublicLogStreamAsync();
+
+app.UseHttpsRedirection();
 app.UseCors("DashboardPolicy");
 app.UseRateLimiter();
-
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
@@ -71,9 +78,7 @@ using (var scope = app.Services.CreateScope())
     {
         var dbDir = "/home/data";
         if (!Directory.Exists(dbDir))
-        {
             Directory.CreateDirectory(dbDir);
-        }
 
         db.Database.Migrate();
     }

@@ -3,7 +3,7 @@ using Xunit;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
-using Microsoft.Extensions.Logging;
+using Station.Logging;
 
 namespace StationAI.Tests;
 
@@ -11,12 +11,12 @@ public class LoreServiceTests
 {
     private readonly Mock<ILoreStoreRepository> _loreStore = new();
     private readonly Mock<ILoreRepository> _loreRepo = new();
-    private readonly Mock<ILogger<LoreService>> _logger = new();
+    private readonly Mock<IStationLogger<LoreService>> _log = new();
     private readonly LoreService _sut;
 
     public LoreServiceTests()
     {
-        _sut = new LoreService(_loreStore.Object, _loreRepo.Object, _logger.Object);
+        _sut = new LoreService(_loreStore.Object, _loreRepo.Object, _log.Object);
     }
 
     [Fact]

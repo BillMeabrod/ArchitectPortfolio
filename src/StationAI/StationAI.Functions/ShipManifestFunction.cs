@@ -1,5 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
+using Station.Logging;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
 using StationAI.Functions;
@@ -7,15 +7,18 @@ using System.Text.Json;
 
 public class ShipManifestFunction
 {
-    private readonly ILogger<ShipManifestFunction> _logger;
     private readonly RiskAssessmentService _riskAssessmentService;
     private readonly RiskAssessmentQueuePublisher _queuePublisher;
+    private readonly IStationLogger<ShipManifestFunction> _log;
 
-    public ShipManifestFunction(ILogger<ShipManifestFunction> logger, RiskAssessmentService riskAssessment, RiskAssessmentQueuePublisher queuePublisher)
+    public ShipManifestFunction(
+        RiskAssessmentService riskAssessment,
+        RiskAssessmentQueuePublisher queuePublisher,
+        IStationLogger<ShipManifestFunction> log)
     {
-        _logger = logger;
         _riskAssessmentService = riskAssessment;
         _queuePublisher = queuePublisher;
+        _log = log;
     }
 
     [Function("ShipManifestQueue")]
@@ -24,31 +27,30 @@ public class ShipManifestFunction
     {
         try
         {
-            _logger.LogInformation("Received manifest message");
-
             var manifest = JsonSerializer.Deserialize<ShipManifest>(message);
             if (manifest is null)
             {
-                _logger.LogError("Failed to deserialize manifest message");
+                _log.Error("Failed to deserialize manifest message");
                 return;
             }
 
-            var assessment = await _riskAssessmentService.AssessRisk(manifest);
-            _logger.LogInformation($"Completed Assessment: {assessment}");
-            _logger.LogInformation("Starting queue publish for {Callsign}", manifest.Callsign);
-            await _queuePublisher.PublishAsync(assessment, manifest);
-            _logger.LogInformation("Queue publish complete for {Callsign}", manifest.Callsign);
+            _log.InfoPublic(
+                "Manifest received for assessment — {ShipName} ({Callsign})",
+                manifest.CorrelationId,
+                manifest.ShipName, manifest.Callsign);
 
-            _logger.LogInformation("Assessment complete for {Callsign}: Bio={Bio} Chem={Chem} Sec={Sec} Recommendation:\"{Recommendation}\"",
-                manifest.Callsign,
-                assessment.BiohazardLevel,
-                assessment.ChemicalHazardLevel,
-                assessment.SecurityHazardLevel,
-                assessment.Recommendation);
+            var assessment = await _riskAssessmentService.AssessRisk(manifest);
+
+            await _queuePublisher.PublishAsync(assessment, manifest);
+
+            _log.InfoPublic(
+                "Assessment dispatched to triage queue — {Callsign}",
+                manifest.CorrelationId,
+                manifest.Callsign);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing manifest message for callsign {Callsign}", message);
+            _log.Error(ex, "Error processing manifest message");
             throw;
         }
     }

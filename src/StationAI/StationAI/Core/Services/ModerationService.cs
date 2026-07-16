@@ -1,17 +1,20 @@
-﻿using StationAI.Core.Interfaces;
+﻿using Station.Logging;
+using StationAI.Core.Interfaces;
 using System.Text.Json;
 
 namespace StationAI.Core.Services
 {
     public class ModerationService : IModerationService
     {
-        private readonly ILogger<ModerationService> _logger;
         private readonly ILargeLanguageModelService _llmService;
+        private readonly IStationLogger<ModerationService> _log;
 
-        public ModerationService(ILogger<ModerationService> logger, ILargeLanguageModelService llmService)
+        public ModerationService(
+            ILargeLanguageModelService llmService,
+            IStationLogger<ModerationService> log)
         {
-            _logger = logger;
             _llmService = llmService;
+            _log = log;
         }
 
         public async Task<bool> IsRejectedByModerationAsync(string directive)
@@ -31,27 +34,24 @@ namespace StationAI.Core.Services
                     {{directive}}
                     """;
 
+                // Full moderation prompt logged to Azure Monitor only — not surfaced publicly
+                _log.Info("Moderation prompt:\n{Prompt}", prompt);
+
                 var response = await _llmService.SendPrompt(prompt, typeof(ModerationResponse));
                 var result = JsonSerializer.Deserialize<ModerationResponse>(response,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (result is null)
                 {
-                    _logger.LogWarning(
-                        "Directive moderation check returned an unparseable response; submitted content left in place.");
+                    _log.Warn("Directive moderation returned unparseable response; submitted content left in place.");
                     return false;
                 }
 
-                if (result.Inappropriate)
-                {
-                    return true;
-                }
-
-                return false;
+                return result.Inappropriate;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Directive moderation check failed; submitted content left in place.");
+                _log.Error(ex, "Directive moderation check failed; submitted content left in place.");
                 return false;
             }
         }

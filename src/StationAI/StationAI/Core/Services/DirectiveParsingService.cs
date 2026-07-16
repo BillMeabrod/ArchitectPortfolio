@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Station.Logging;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Models.Constants;
@@ -9,7 +9,7 @@ namespace StationAI.Core.Services;
 public class DirectiveParsingService : IDirectiveParsingService
 {
     private readonly ILargeLanguageModelService _llmService;
-    private readonly ILogger<DirectiveParsingService> _logger;
+    private readonly IStationLogger<DirectiveParsingService> _log;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -18,10 +18,10 @@ public class DirectiveParsingService : IDirectiveParsingService
 
     public DirectiveParsingService(
         ILargeLanguageModelService llmService,
-        ILogger<DirectiveParsingService> logger)
+        IStationLogger<DirectiveParsingService> log)
     {
         _llmService = llmService;
-        _logger = logger;
+        _log = log;
     }
 
     public async Task<IReadOnlyList<DirectiveTarget>> Parse(string directive)
@@ -32,15 +32,18 @@ public class DirectiveParsingService : IDirectiveParsingService
         string prompt = BuildPrompt(directive);
         string response;
 
+        _log.Info("Parsing directive targets — {Length} chars", directive.Length);
+
+        // Full parsing prompt logged to Azure Monitor only — not surfaced publicly
+        _log.Info("Directive parsing prompt:\n{Prompt}", prompt);
+
         try
         {
             response = await _llmService.SendPrompt(prompt, typeof(List<DirectiveTarget>));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex,
-                "Directive parse failed: LLM call threw unexpectedly. Directive length: {Length}. No targets stored.",
-                directive.Length);
+            _log.Error(ex, "Directive parse failed: LLM call threw unexpectedly. Directive length: {Length}. No targets stored.", directive.Length);
             return [];
         }
 
@@ -51,17 +54,13 @@ public class DirectiveParsingService : IDirectiveParsingService
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex,
-                "Directive parse failed: LLM returned unparseable JSON. Raw response: {Response}. No targets stored.",
-                response);
+            _log.Error(ex, "Directive parse failed: LLM returned unparseable JSON. Raw response: {Response}. No targets stored.", response);
             return [];
         }
 
         if (parsed is null)
         {
-            _logger.LogWarning(
-                "Directive parse failed: LLM returned null. Raw response: {Response}. No targets stored.",
-                response);
+            _log.Warn("Directive parse failed: LLM returned null. No targets stored.");
             return [];
         }
 
@@ -76,16 +75,14 @@ public class DirectiveParsingService : IDirectiveParsingService
         {
             if (string.IsNullOrWhiteSpace(candidate.Target))
             {
-                _logger.LogWarning(
-                    "Directive parse produced a target with an empty Target value; discarding. Type: {Type}, Concern: {Concern}",
+                _log.Warn("Directive parse produced a target with an empty Target value; discarding. Type: {Type}, Concern: {Concern}",
                     candidate.Type, candidate.Concern);
                 continue;
             }
 
             if (!LoreCategories.IsValid(candidate.Type))
             {
-                _logger.LogWarning(
-                    "Directive parse produced target '{Target}' with unrecognized category '{Type}'; discarding. Valid categories: {Categories}",
+                _log.Warn("Directive parse produced target '{Target}' with unrecognized category '{Type}'; discarding. Valid categories: {Categories}",
                     candidate.Target, candidate.Type, string.Join(", ", LoreCategories.All));
                 continue;
             }

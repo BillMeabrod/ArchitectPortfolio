@@ -2,6 +2,7 @@ using Xunit;
 using Azure.Storage.Queues;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Station.Logging;
 using StationShipManifestLogger.Common.Data;
 using StationShipManifestLogger.Features.Docking;
 using System.Text.Json;
@@ -14,6 +15,7 @@ public class SubmitManifestHandlerTests : IDisposable
     private readonly Mock<QueueClient> _mockQueueClient;
     private readonly ShipManifestQueuePublisher _publisher;
     private readonly SubmitManifestReportHandler _sut;
+
     public SubmitManifestHandlerTests()
     {
         var options = new DbContextOptionsBuilder<ManifestLoggerDbContext>()
@@ -29,7 +31,8 @@ public class SubmitManifestHandlerTests : IDisposable
             .Returns(_mockQueueClient.Object);
 
         _publisher = new ShipManifestQueuePublisher(mockQueueServiceClient.Object);
-        _sut = new SubmitManifestReportHandler(_context, _publisher);
+
+        _sut = new SubmitManifestReportHandler(_context, _publisher, new Mock<IStationLogger<SubmitManifestReportHandler>>().Object);
     }
 
     public void Dispose() => _context.Dispose();
@@ -38,13 +41,13 @@ public class SubmitManifestHandlerTests : IDisposable
         string shipName = "Nebula Runner",
         string callsign = "NR-007",
         string captainName = "Han Solo") => new()
-    {
-        ShipName = shipName,
-        Callsign = callsign,
-        CaptainName = captainName,
-        CargoItems = ["spice", "fuel"],
-        Passengers = ["Chewie"]
-    };
+        {
+            ShipName = shipName,
+            Callsign = callsign,
+            CaptainName = captainName,
+            CargoItems = ["spice", "fuel"],
+            Passengers = ["Chewie"]
+        };
 
     [Fact]
     public async Task Handle_SavesManifestAuditLog_WithCorrectFieldValues()
@@ -84,5 +87,20 @@ public class SubmitManifestHandlerTests : IDisposable
         var log = await _context.ManifestAuditLogs.FindAsync(returnedId);
         Assert.NotNull(log);
         Assert.Equal(returnedId, log.Id);
+    }
+
+    [Fact]
+    public async Task Handle_GeneratesCorrelationId_AndPropagatesIntoRawPayload()
+    {
+        var command = BuildCommand();
+
+        await _sut.Handle(command, CancellationToken.None);
+
+        Assert.NotEmpty(command.CorrelationId);
+
+        var log = await _context.ManifestAuditLogs.SingleAsync();
+        var deserialized = JsonSerializer.Deserialize<ManifestReportCommand>(log.RawPayload);
+        Assert.NotNull(deserialized);
+        Assert.Equal(command.CorrelationId, deserialized.CorrelationId);
     }
 }

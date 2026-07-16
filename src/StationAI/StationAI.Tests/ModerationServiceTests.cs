@@ -2,19 +2,19 @@ using Moq;
 using Xunit;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Services;
-using Microsoft.Extensions.Logging;
+using Station.Logging;
 
 namespace StationAI.Tests;
 
 public class ModerationServiceTests
 {
     private readonly Mock<ILargeLanguageModelService> _llm = new();
-    private readonly Mock<ILogger<ModerationService>> _logger = new();
+    private readonly Mock<IStationLogger<ModerationService>> _log = new();
     private readonly ModerationService _sut;
 
     public ModerationServiceTests()
     {
-        _sut = new ModerationService(_logger.Object, _llm.Object);
+        _sut = new ModerationService(_llm.Object, _log.Object);
     }
 
     [Fact]

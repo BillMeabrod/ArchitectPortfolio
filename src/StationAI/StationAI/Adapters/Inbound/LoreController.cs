@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Station.Logging;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Models.Validation;
@@ -11,12 +12,12 @@ namespace StationAI.Adapters.Inbound;
 public class LoreController : ControllerBase
 {
     private readonly ILoreService _loreService;
-    private readonly ILogger<LoreController> _logger;
+    private readonly IStationLogger<LoreController> _log;
 
-    public LoreController(ILoreService loreService, ILogger<LoreController> logger)
+    public LoreController(ILoreService loreService, IStationLogger<LoreController> log)
     {
         _loreService = loreService;
-        _logger = logger;
+        _log = log;
     }
 
     [HttpGet]
@@ -28,7 +29,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve lore entries");
+            _log.Error(ex, "Failed to retrieve lore entries");
             return StatusCode(500, "Failed to retrieve lore entries");
         }
     }
@@ -43,7 +44,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve lore entry {Id}", id);
+            _log.Error(ex, "Failed to retrieve lore entry {Id}", id);
             return StatusCode(500, $"Failed to retrieve lore entry {id}");
         }
     }
@@ -58,7 +59,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create lore entry with title {Title}", request.Title);
+            _log.Error(ex, "Failed to create lore entry with title {Title}", request.Title);
             return StatusCode(500, "Failed to create lore entry");
         }
     }
@@ -80,7 +81,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Bulk lore import failed.");
+            _log.Error(ex, "Bulk lore import failed.");
             return StatusCode(500, "Bulk import failed.");
         }
     }
@@ -95,7 +96,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update lore entry {Id}", id);
+            _log.Error(ex, "Failed to update lore entry {Id}", id);
             return StatusCode(500, $"Failed to update lore entry {id}");
         }
     }
@@ -110,7 +111,7 @@ public class LoreController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete lore entry {Id}", id);
+            _log.Error(ex, "Failed to delete lore entry {Id}", id);
             return StatusCode(500, $"Failed to delete lore entry {id}");
         }
     }

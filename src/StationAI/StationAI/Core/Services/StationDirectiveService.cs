@@ -1,16 +1,19 @@
-﻿using StationAI.Core.Interfaces;
+﻿using Station.Logging;
+using StationAI.Core.Interfaces;
 
 namespace StationAI.Core.Services
 {
     public class StationDirectiveService : IStationDirectiveService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<StationDirectiveService> _logger;
+        private readonly IStationLogger<StationDirectiveService> _log;
 
-        public StationDirectiveService(IServiceScopeFactory scopeFactory, ILogger<StationDirectiveService> logger)
+        public StationDirectiveService(
+            IServiceScopeFactory scopeFactory,
+            IStationLogger<StationDirectiveService> log)
         {
             _scopeFactory = scopeFactory;
-            _logger = logger;
+            _log = log;
         }
 
         public async Task ProcessDirectiveAsync(string directive)
@@ -21,10 +24,12 @@ namespace StationAI.Core.Services
             var moderationService = scope.ServiceProvider.GetRequiredService<IModerationService>();
             var stationDirectiveRepository = scope.ServiceProvider.GetRequiredService<IStationDirectiveRepository>();
 
+            _log.InfoPublic("Station directive received — running content moderation", null);
+
             bool moderationRejected = await moderationService.IsRejectedByModerationAsync(directive);
             if (moderationRejected)
             {
-                _logger.LogWarning("Directive moderation rejected submitted content; reverting to fallback.");
+                _log.WarnPublic("Directive failed moderation — reverting to fallback", null);
 
                 try
                 {
@@ -32,7 +37,7 @@ namespace StationAI.Core.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to revert directive to fallback after moderation rejection.");
+                    _log.Error(ex, "Failed to revert directive to fallback after moderation rejection.");
                 }
 
                 try
@@ -41,10 +46,13 @@ namespace StationAI.Core.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to clear directive targets after moderation rejection.");
+                    _log.Error(ex, "Failed to clear directive targets after moderation rejection.");
                 }
+
                 return;
             }
+
+            _log.InfoPublic("Directive passed moderation — parsing targets", null);
 
             await ParseAndStoreTargetsAsync(directive, parsingService, targetRepository);
         }
@@ -59,13 +67,15 @@ namespace StationAI.Core.Services
                 var targets = await parsingService.Parse(directive);
                 await targetRepository.SaveTargetsAsync(targets);
 
-                _logger.LogInformation(
-                    "Parsed and stored {Count} directive target(s) from saved directive.", targets.Count);
+                _log.InfoPublic(
+                    "Directive targets extracted — {Count} target(s): {Targets}",
+                    null,
+                    targets.Count,
+                    string.Join(", ", targets.Select(t => $"{t.Target} ({t.Type})")));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to parse or store directive targets; previously stored targets left in place.");
+                _log.Error(ex, "Failed to parse or store directive targets; previously stored targets left in place.");
             }
         }
     }

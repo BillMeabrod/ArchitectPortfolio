@@ -2,6 +2,7 @@
 using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Station.Logging;
 using StationAI.Adapters.Outbound;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Services;
@@ -22,6 +23,11 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("Qdrant:ApiKey is not set. Fix your configuration.");
         var qdrantCollection = Environment.GetEnvironmentVariable("Qdrant__Collection") ?? "station-lore";
 
+        var blobServiceClient = new BlobServiceClient(blobStorageConnection);
+        services.AddSingleton(blobServiceClient);
+
+        services.AddStationLogging("station-ai", "ARIA");
+
         services.AddScoped<RiskAssessmentService>();
         services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
         services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>();
@@ -30,10 +36,11 @@ var host = new HostBuilder()
         services.AddSingleton<ILoreRepository>(sp =>
             new QdrantLoreAdapter(qdrantUrl, qdrantApiKey, qdrantCollection,
                 sp.GetRequiredService<IEmbeddingService>()));
-        services.AddSingleton(new BlobServiceClient(blobStorageConnection));
         services.AddSingleton(new QueueServiceClient(azureWebJobsStorage));
         services.AddScoped<RiskAssessmentQueuePublisher>();
     })
     .Build();
+
+await host.Services.WarmPublicLogStreamAsync();
 
 await host.RunAsync();
