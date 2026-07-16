@@ -2,6 +2,7 @@
 using Station.Logging;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace StationAI.Adapters.Inbound;
 
@@ -23,20 +24,21 @@ public class LogStreamController : ControllerBase
         Response.Headers.Append("Cache-Control", "no-cache");
         Response.Headers.Append("X-Accel-Buffering", "no");
 
+        var channel = Channel.CreateUnbounded<LogEntry>(
+            new UnboundedChannelOptions { SingleReader = true });
+
+        using var subscription = _stream.Subscribe(entry =>
+            channel.Writer.TryWrite(entry));
+
         foreach (var entry in _stream.GetHistory())
             await WriteEntry(entry, cancellationToken);
 
-        var tcs = new TaskCompletionSource();
-
-        using var subscription = _stream.Subscribe(async entry =>
+        await foreach (var entry in channel.Reader.ReadAllAsync(cancellationToken))
         {
             try
             { await WriteEntry(entry, cancellationToken); }
-            catch { tcs.TrySetResult(); }
-        });
-
-        using var reg = cancellationToken.Register(() => tcs.TrySetResult());
-        await tcs.Task;
+            catch { break; }
+        }
     }
 
     private async Task WriteEntry(LogEntry entry, CancellationToken cancellationToken)

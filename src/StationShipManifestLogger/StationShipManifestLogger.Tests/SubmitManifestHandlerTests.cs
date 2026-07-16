@@ -88,4 +88,19 @@ public class SubmitManifestHandlerTests : IDisposable
         Assert.NotNull(log);
         Assert.Equal(returnedId, log.Id);
     }
+
+    [Fact]
+    public async Task Handle_GeneratesCorrelationId_AndPropagatesIntoRawPayload()
+    {
+        var command = BuildCommand();
+
+        await _sut.Handle(command, CancellationToken.None);
+
+        Assert.NotEmpty(command.CorrelationId);
+
+        var log = await _context.ManifestAuditLogs.SingleAsync();
+        var deserialized = JsonSerializer.Deserialize<ManifestReportCommand>(log.RawPayload);
+        Assert.NotNull(deserialized);
+        Assert.Equal(command.CorrelationId, deserialized.CorrelationId);
+    }
 }

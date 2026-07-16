@@ -188,7 +188,7 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Failed to retrieve directive targets; proceeding without directive-based universe intel.");
+                _log.Error(ex, "Failed to retrieve directive targets [{CorrelationId}]; proceeding without directive-based universe intel.", correlationId);
                 return [];
             }
 

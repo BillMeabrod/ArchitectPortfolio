@@ -41,12 +41,12 @@ public class ShipManifestFunction
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
 
+            await _queuePublisher.PublishAsync(assessment, manifest);
+
             _log.InfoPublic(
                 "Assessment dispatched to triage queue — {Callsign}",
                 manifest.CorrelationId,
                 manifest.Callsign);
-
-            await _queuePublisher.PublishAsync(assessment, manifest);
         }
         catch (Exception ex)
         {
