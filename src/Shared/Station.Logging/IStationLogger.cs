@@ -2,8 +2,12 @@
 
 public interface IStationLogger<T>
 {
-    LogContext Info(string template, params object?[] args);
-    LogContext Warn(string template, params object?[] args);
-    LogContext Error(string template, params object?[] args);
-    LogContext Error(Exception ex, string template, params object?[] args);
+    void Info(string template, params object?[] args);
+    void InfoPublic(string template, string? correlationId, params object?[] args);
+    void Warn(string template, params object?[] args);
+    void WarnPublic(string template, string? correlationId, params object?[] args);
+    void Error(string template, params object?[] args);
+    void Error(Exception ex, string template, params object?[] args);
+    void ErrorPublic(string template, string? correlationId, params object?[] args);
+    void ErrorPublic(Exception ex, string template, string? correlationId, params object?[] args);
 }
