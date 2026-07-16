@@ -2,6 +2,7 @@ using Xunit;
 using Azure.Storage.Queues;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Station.Logging;
 using StationShipManifestLogger.Common.Data;
 using StationShipManifestLogger.Features.Docking;
 using System.Text.Json;
@@ -13,7 +14,9 @@ public class SubmitManifestHandlerTests : IDisposable
     private readonly ManifestLoggerDbContext _context;
     private readonly Mock<QueueClient> _mockQueueClient;
     private readonly ShipManifestQueuePublisher _publisher;
+    private readonly Mock<IStationLogger<SubmitManifestReportHandler>> _log;
     private readonly SubmitManifestReportHandler _sut;
+
     public SubmitManifestHandlerTests()
     {
         var options = new DbContextOptionsBuilder<ManifestLoggerDbContext>()
@@ -29,7 +32,12 @@ public class SubmitManifestHandlerTests : IDisposable
             .Returns(_mockQueueClient.Object);
 
         _publisher = new ShipManifestQueuePublisher(mockQueueServiceClient.Object);
-        _sut = new SubmitManifestReportHandler(_context, _publisher);
+
+        _log = new Mock<IStationLogger<SubmitManifestReportHandler>>();
+        _log.Setup(l => l.Info(It.IsAny<string>(), It.IsAny<object?[]>()))
+            .Returns(new LogContext("", new NoOpPublicLogStream(), "MANIFEST", "INFO"));
+
+        _sut = new SubmitManifestReportHandler(_context, _publisher, _log.Object);
     }
 
     public void Dispose() => _context.Dispose();
@@ -38,13 +46,13 @@ public class SubmitManifestHandlerTests : IDisposable
         string shipName = "Nebula Runner",
         string callsign = "NR-007",
         string captainName = "Han Solo") => new()
-    {
-        ShipName = shipName,
-        Callsign = callsign,
-        CaptainName = captainName,
-        CargoItems = ["spice", "fuel"],
-        Passengers = ["Chewie"]
-    };
+        {
+            ShipName = shipName,
+            Callsign = callsign,
+            CaptainName = captainName,
+            CargoItems = ["spice", "fuel"],
+            Passengers = ["Chewie"]
+        };
 
     [Fact]
     public async Task Handle_SavesManifestAuditLog_WithCorrectFieldValues()
@@ -84,5 +92,17 @@ public class SubmitManifestHandlerTests : IDisposable
         var log = await _context.ManifestAuditLogs.FindAsync(returnedId);
         Assert.NotNull(log);
         Assert.Equal(returnedId, log.Id);
+    }
+
+    private sealed class NoOpPublicLogStream : IPublicLogStream
+    {
+        public void Publish(LogEntry entry) { }
+        public IReadOnlyList<LogEntry> GetHistory() => [];
+        public IDisposable Subscribe(Action<LogEntry> handler) => new NoOpDisposable();
+    }
+
+    private sealed class NoOpDisposable : IDisposable
+    {
+        public void Dispose() { }
     }
 }

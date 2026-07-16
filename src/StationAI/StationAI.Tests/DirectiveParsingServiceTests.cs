@@ -3,7 +3,7 @@ using Xunit;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
-using Microsoft.Extensions.Logging;
+using Station.Logging;
 using System.Text.Json;
 
 namespace StationAI.Tests;
@@ -11,12 +11,12 @@ namespace StationAI.Tests;
 public class DirectiveParsingServiceTests
 {
     private readonly Mock<ILargeLanguageModelService> _llm = new();
-    private readonly Mock<ILogger<DirectiveParsingService>> _logger = new();
+    private readonly Mock<IStationLogger<DirectiveParsingService>> _log = new();
     private readonly DirectiveParsingService _sut;
 
     public DirectiveParsingServiceTests()
     {
-        _sut = new DirectiveParsingService(_llm.Object, _logger.Object);
+        _sut = new DirectiveParsingService(_llm.Object, _log.Object);
     }
 
     [Theory]
