@@ -32,7 +32,9 @@ public class DirectiveParsingService : IDirectiveParsingService
         string prompt = BuildPrompt(directive);
         string response;
 
-        _log.Info("Parsing directive targets — directive length: {Length} chars", directive.Length);
+        _log.Info("Parsing directive targets — {Length} chars", directive.Length);
+
+        // Full parsing prompt logged to Azure Monitor only — not surfaced publicly
         _log.Info("Directive parsing prompt:\n{Prompt}", prompt);
 
         try
@@ -41,8 +43,7 @@ public class DirectiveParsingService : IDirectiveParsingService
         }
         catch (Exception ex)
         {
-            _log.Warn("Directive parse failed: LLM call threw unexpectedly. Directive length: {Length}. No targets stored.", directive.Length);
-            _log.Error(ex, "Directive parse LLM exception");
+            _log.Error(ex, "Directive parse failed: LLM call threw unexpectedly. Directive length: {Length}. No targets stored.", directive.Length);
             return [];
         }
 
@@ -53,8 +54,7 @@ public class DirectiveParsingService : IDirectiveParsingService
         }
         catch (JsonException ex)
         {
-            _log.Warn("Directive parse failed: LLM returned unparseable JSON. No targets stored.");
-            _log.Error(ex, "Directive parse JSON exception. Raw response: {Response}", response);
+            _log.Error(ex, "Directive parse failed: LLM returned unparseable JSON. Raw response: {Response}. No targets stored.", response);
             return [];
         }
 
@@ -82,8 +82,8 @@ public class DirectiveParsingService : IDirectiveParsingService
 
             if (!LoreCategories.IsValid(candidate.Type))
             {
-                _log.Warn("Directive parse produced target '{Target}' with unrecognized category '{Type}'; discarding.",
-                    candidate.Target, candidate.Type);
+                _log.Warn("Directive parse produced target '{Target}' with unrecognized category '{Type}'; discarding. Valid categories: {Categories}",
+                    candidate.Target, candidate.Type, string.Join(", ", LoreCategories.All));
                 continue;
             }
 

@@ -6,15 +6,15 @@ namespace StationAI.Core.Services
 {
     public class ModerationService : IModerationService
     {
-        private readonly IStationLogger<ModerationService> _log;
         private readonly ILargeLanguageModelService _llmService;
+        private readonly IStationLogger<ModerationService> _log;
 
         public ModerationService(
-            IStationLogger<ModerationService> log,
-            ILargeLanguageModelService llmService)
+            ILargeLanguageModelService llmService,
+            IStationLogger<ModerationService> log)
         {
-            _log = log;
             _llmService = llmService;
+            _log = log;
         }
 
         public async Task<bool> IsRejectedByModerationAsync(string directive)
@@ -34,6 +34,7 @@ namespace StationAI.Core.Services
                     {{directive}}
                     """;
 
+                // Full moderation prompt logged to Azure Monitor only — not surfaced publicly
                 _log.Info("Moderation prompt:\n{Prompt}", prompt);
 
                 var response = await _llmService.SendPrompt(prompt, typeof(ModerationResponse));
@@ -42,7 +43,7 @@ namespace StationAI.Core.Services
 
                 if (result is null)
                 {
-                    _log.Warn("Directive moderation check returned an unparseable response; submitted content left in place.");
+                    _log.Warn("Directive moderation returned unparseable response; submitted content left in place.");
                     return false;
                 }
 

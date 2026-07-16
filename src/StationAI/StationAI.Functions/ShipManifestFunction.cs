@@ -1,5 +1,4 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
 using Station.Logging;
 using StationAI.Core.Models;
 using StationAI.Core.Services;
@@ -8,21 +7,18 @@ using System.Text.Json;
 
 public class ShipManifestFunction
 {
-    private readonly ILogger<ShipManifestFunction> _logger;
     private readonly RiskAssessmentService _riskAssessmentService;
     private readonly RiskAssessmentQueuePublisher _queuePublisher;
-    private readonly IPublicLogStream _publicLog;
+    private readonly IStationLogger<ShipManifestFunction> _log;
 
     public ShipManifestFunction(
-        ILogger<ShipManifestFunction> logger,
         RiskAssessmentService riskAssessment,
         RiskAssessmentQueuePublisher queuePublisher,
-        IPublicLogStream publicLog)
+        IStationLogger<ShipManifestFunction> log)
     {
-        _logger = logger;
         _riskAssessmentService = riskAssessment;
         _queuePublisher = queuePublisher;
-        _publicLog = publicLog;
+        _log = log;
     }
 
     [Function("ShipManifestQueue")]
@@ -34,39 +30,23 @@ public class ShipManifestFunction
             var manifest = JsonSerializer.Deserialize<ShipManifest>(message);
             if (manifest is null)
             {
-                _logger.LogError("Failed to deserialize manifest message");
+                _log.Error("Failed to deserialize manifest message");
                 return;
             }
 
-            _publicLog.Publish(new LogEntry
-            {
-                Source = "ARIA",
-                Level = "INFO",
-                CorrelationId = manifest.CorrelationId,
-                Message = $"Manifest received for assessment — {manifest.ShipName} ({manifest.Callsign})"
-            });
+            _log.Info("Manifest received for assessment — {ShipName} ({Callsign})", manifest.ShipName, manifest.Callsign)
+                .Public(manifest.CorrelationId);
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
 
-            _publicLog.Publish(new LogEntry
-            {
-                Source = "ARIA",
-                Level = "INFO",
-                CorrelationId = manifest.CorrelationId,
-                Message = $"Dispatching assessment to triage queue — {manifest.Callsign}"
-            });
+            _log.Info("Assessment dispatched to triage queue — {Callsign}", manifest.Callsign)
+                .Public(manifest.CorrelationId);
 
             await _queuePublisher.PublishAsync(assessment, manifest);
-
-            _logger.LogInformation("Assessment complete for {Callsign}: Bio={Bio} Chem={Chem} Sec={Sec}",
-                manifest.Callsign,
-                assessment.BiohazardLevel,
-                assessment.ChemicalHazardLevel,
-                assessment.SecurityHazardLevel);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing manifest message");
+            _log.Error(ex, "Error processing manifest message");
             throw;
         }
     }

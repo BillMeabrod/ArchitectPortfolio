@@ -45,6 +45,7 @@ namespace StationAI.Core.Services
             _log.Info("Sending prompt to ARIA — {Callsign}", manifest.Callsign)
                 .Public(manifest.CorrelationId);
 
+            // Full prompt logged to Azure Monitor only — not surfaced publicly
             _log.Info("Full prompt for {Callsign}:\n{Prompt}", manifest.Callsign, prompt);
 
             var assessment = await TryAssessOnce(prompt) ?? await TryAssessOnce(prompt);
@@ -177,8 +178,7 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _log.Warn("Manifest lore search failed for {Callsign}; proceeding without manifest-based universe intel.", manifest.Callsign);
-                _log.Error(ex, "Manifest lore search exception for {Callsign}", manifest.Callsign);
+                _log.Error(ex, "Manifest lore search failed for {Callsign}; proceeding without manifest-based universe intel.", manifest.Callsign);
                 return [];
             }
         }
@@ -192,21 +192,20 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _log.Warn("Failed to retrieve directive targets; proceeding without directive-based universe intel.");
-                _log.Error(ex, "Directive target retrieval exception");
+                _log.Error(ex, "Failed to retrieve directive targets; proceeding without directive-based universe intel.");
                 return [];
             }
 
             if (targets.Count == 0)
                 return [];
 
-            var searches = targets.Select(t => SearchOneLoreTargetAsync(t, correlationId));
+            var searches = targets.Select(t => SearchOneLoreTargetAsync(t));
             var results = await Task.WhenAll(searches);
 
             return results.SelectMany(r => r);
         }
 
-        private async Task<IEnumerable<LoreEntry>> SearchOneLoreTargetAsync(DirectiveTarget target, string? correlationId)
+        private async Task<IEnumerable<LoreEntry>> SearchOneLoreTargetAsync(DirectiveTarget target)
         {
             try
             {
@@ -214,8 +213,7 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _log.Warn("Lore search failed for directive target '{Target}' (type: {Type}); skipping.", target.Target, target.Type);
-                _log.Error(ex, "Lore search exception for target {Target}", target.Target);
+                _log.Error(ex, "Lore search failed for directive target {Target} (type: {Type}); skipping.", target.Target, target.Type);
                 return [];
             }
         }
