@@ -87,7 +87,7 @@ public class StationLoggingTests
     }
 
     [Fact]
-    public void StationLogger_PublicFormatsDuplicateNamedPlaceholdersAndEscapedBraces()
+    public void StationLogger_InfoPublic_FormatsNamedPlaceholdersAndEscapedBraces()
     {
         var stream = new RecordingPublicLogStream();
         var logger = new StationLogger<StationLoggingTests>(
@@ -95,9 +95,7 @@ public class StationLoggingTests
             stream,
             new StationLoggerSource("StationAI"));
 
-        logger
-            .Info("Docking {{bay}} assigned to {Callsign}. Repeat {Callsign}.", "NR-007")
-            .Public("corr-123");
+        logger.InfoPublic("Docking {{bay}} assigned to {Callsign}. Repeat {Callsign}.", "corr-123", "NR-007");
 
         var entry = Assert.Single(stream.Entries);
         Assert.Equal("Docking {bay} assigned to NR-007. Repeat NR-007.", entry.Message);
@@ -182,8 +180,6 @@ public class StationLoggingTests
 
     private sealed class NoOpDisposable : IDisposable
     {
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }
