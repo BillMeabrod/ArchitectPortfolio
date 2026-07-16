@@ -1,4 +1,5 @@
-﻿using StationAI.Core.Interfaces;
+﻿using Station.Logging;
+using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using StationAI.Core.Models.Constants;
 
@@ -8,16 +9,16 @@ public class LoreService : ILoreService
 {
     private readonly ILoreRepository _loreRepository;
     private readonly ILoreStoreRepository _loreStoreRepository;
-    private readonly ILogger<LoreService> _logger;
+    private readonly IStationLogger<LoreService> _log;
 
     public LoreService(
         ILoreStoreRepository loreStoreRepository,
         ILoreRepository loreRepository,
-        ILogger<LoreService> logger)
+        IStationLogger<LoreService> log)
     {
         _loreStoreRepository = loreStoreRepository;
         _loreRepository = loreRepository;
-        _logger = logger;
+        _log = log;
     }
 
     public async Task<LoreEntry> CreateAsync(string title, string category, string body)
@@ -31,6 +32,10 @@ public class LoreService : ILoreService
 
         var saved = await _loreStoreRepository.SaveAsync(entry);
         await _loreRepository.UpsertAsync(saved);
+
+        _log.Info("Lore entry created — {Title} [{Category}]", saved.Title, saved.Category)
+            .Public();
+
         return saved;
     }
 
@@ -52,6 +57,10 @@ public class LoreService : ILoreService
 
         var saved = await _loreStoreRepository.SaveAsync(existing);
         await _loreRepository.UpsertAsync(saved);
+
+        _log.Info("Lore entry updated — {Title} [{Category}]", saved.Title, saved.Category)
+            .Public();
+
         return saved;
     }
 
@@ -69,7 +78,7 @@ public class LoreService : ILoreService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete lore entry {Id} from Postgres after Qdrant delete. Restoring Qdrant entry.", id);
+            _log.Error(ex, "Failed to delete lore entry {Id} from Postgres after Qdrant delete. Restoring Qdrant entry.", id);
 
             try
             {
@@ -77,11 +86,14 @@ public class LoreService : ILoreService
             }
             catch (Exception restoreEx)
             {
-                _logger.LogError(restoreEx, "Failed to restore lore entry {Id} in Qdrant after Postgres delete failure.", id);
+                _log.Error(restoreEx, "Failed to restore lore entry {Id} in Qdrant after Postgres delete failure.", id);
             }
 
             throw;
         }
+
+        _log.Info("Lore entry deleted — {Title}", existing.Title)
+            .Public();
 
         return true;
     }
@@ -114,9 +126,9 @@ public class LoreService : ILoreService
             await _loreRepository.UpsertBulkAsync(saved);
             result.Succeeded = saved.Count;
 
-            _logger.LogInformation(
-                "Bulk lore import complete: {Succeeded} saved, {Failed} failed.",
-                result.Succeeded, result.Failures.Count);
+            _log.Info("Bulk lore import complete — {Succeeded} saved, {Failed} failed",
+                result.Succeeded, result.Failures.Count)
+                .Public();
         }
 
         return result;

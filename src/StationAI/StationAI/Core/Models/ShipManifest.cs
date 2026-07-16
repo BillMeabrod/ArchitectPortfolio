@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace StationAI.Core.Models
+﻿namespace StationAI.Core.Models
 {
     public class ShipManifest
     {
@@ -9,5 +7,6 @@ namespace StationAI.Core.Models
         public string CaptainName { get; set; } = string.Empty;
         public List<string> CargoItems { get; set; } = [];
         public List<string> Passengers { get; set; } = [];
+        public string CorrelationId { get; set; } = string.Empty;
     }
 }

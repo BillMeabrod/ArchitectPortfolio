@@ -1,4 +1,5 @@
-﻿using StationAI.Core.Interfaces;
+﻿using Station.Logging;
+using StationAI.Core.Interfaces;
 using StationAI.Core.Models;
 using System.Text;
 using System.Text.Json;
@@ -11,38 +12,56 @@ namespace StationAI.Core.Services
         private readonly IStationDirectiveRepository _rulesRepository;
         private readonly ILoreRepository _loreRepository;
         private readonly IDirectiveTargetRepository _directiveTargetRepository;
-        private readonly ILogger<RiskAssessmentService> _logger;
+        private readonly IStationLogger<RiskAssessmentService> _log;
 
         public RiskAssessmentService(
             ILargeLanguageModelService llmService,
             IStationDirectiveRepository rulesRepository,
             ILoreRepository loreRepository,
             IDirectiveTargetRepository directiveTargetRepository,
-            ILogger<RiskAssessmentService> logger)
+            IStationLogger<RiskAssessmentService> log)
         {
             _llmService = llmService;
             _rulesRepository = rulesRepository;
             _loreRepository = loreRepository;
             _directiveTargetRepository = directiveTargetRepository;
-            _logger = logger;
+            _log = log;
         }
 
         public async Task<RiskAssessment> AssessRisk(ShipManifest manifest)
         {
+            _log.Info("Assessment started — {Callsign}", manifest.Callsign)
+                .Public(manifest.CorrelationId);
+
             string stationDirective = await _rulesRepository.GetRules() ?? AriaIdentity.NoStationDirectiveFallback;
             string manifestJson = JsonSerializer.Serialize(manifest);
-            string loreIntel = await BuildLoreContextAsync(manifest);
 
+            _log.Info("Loading lore context — {Callsign}", manifest.Callsign)
+                .Public(manifest.CorrelationId);
+
+            string loreIntel = await BuildLoreContextAsync(manifest);
             string prompt = BuildPrompt(stationDirective, manifestJson, loreIntel);
-            _logger.LogInformation(
-                "Assessing risk for manifest {Callsign} with directive length {DirectiveLength} and {LoreEntryCount} lore entries",
-                manifest.Callsign,
-                stationDirective.Length,
-                loreIntel.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+
+            _log.Info("Sending prompt to ARIA — {Callsign}", manifest.Callsign)
+                .Public(manifest.CorrelationId);
+
+            _log.Info("Full prompt for {Callsign}:\n{Prompt}", manifest.Callsign, prompt);
+
             var assessment = await TryAssessOnce(prompt) ?? await TryAssessOnce(prompt);
 
-            return assessment ?? throw new InvalidOperationException(
-                "ARIA returned an out-of-range or invalid risk assessment twice in a row.");
+            if (assessment is null)
+                throw new InvalidOperationException("ARIA returned an out-of-range or invalid risk assessment twice in a row.");
+
+            _log.Info("Assessment complete — {ShipName} ({Callsign}): Bio={Bio} Chem={Chem} Sec={Sec}",
+                manifest.ShipName, manifest.Callsign,
+                assessment.BiohazardLevel, assessment.ChemicalHazardLevel, assessment.SecurityHazardLevel)
+                .Public(manifest.CorrelationId);
+
+            if (assessment.InappropriateContent)
+                _log.Warn("Inappropriate content flagged — {Callsign}", manifest.Callsign)
+                    .Public(manifest.CorrelationId);
+
+            return assessment;
         }
 
         private async Task<RiskAssessment?> TryAssessOnce(string prompt)
@@ -115,11 +134,10 @@ namespace StationAI.Core.Services
         private async Task<string> BuildLoreContextAsync(ShipManifest manifest)
         {
             var manifestSearchTask = SearchByManifestAsync(manifest);
-            var directiveSearchTask = SearchByDirectiveTargetsAsync();
+            var directiveSearchTask = SearchByDirectiveTargetsAsync(manifest.CorrelationId);
 
             await Task.WhenAll(manifestSearchTask, directiveSearchTask);
 
-            // Deduplicate by Id; manifest results take precedence in ordering.
             var seen = new HashSet<int>();
             var combined = new List<LoreEntry>();
 
@@ -128,6 +146,9 @@ namespace StationAI.Core.Services
                 if (seen.Add(entry.Id))
                     combined.Add(entry);
             }
+
+            _log.Info("Lore context built — {Count} entries retrieved", combined.Count)
+                .Public(manifest.CorrelationId);
 
             if (combined.Count == 0)
                 return string.Empty;
@@ -156,14 +177,13 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
-                    "Manifest lore search failed for callsign {Callsign}; proceeding without manifest-based universe intel.",
-                    manifest.Callsign);
+                _log.Warn("Manifest lore search failed for {Callsign}; proceeding without manifest-based universe intel.", manifest.Callsign);
+                _log.Error(ex, "Manifest lore search exception for {Callsign}", manifest.Callsign);
                 return [];
             }
         }
 
-        private async Task<IEnumerable<LoreEntry>> SearchByDirectiveTargetsAsync()
+        private async Task<IEnumerable<LoreEntry>> SearchByDirectiveTargetsAsync(string? correlationId)
         {
             IReadOnlyList<DirectiveTarget> targets;
             try
@@ -172,21 +192,21 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
-                    "Failed to retrieve directive targets; proceeding without directive-based universe intel.");
+                _log.Warn("Failed to retrieve directive targets; proceeding without directive-based universe intel.");
+                _log.Error(ex, "Directive target retrieval exception");
                 return [];
             }
 
             if (targets.Count == 0)
                 return [];
 
-            var searches = targets.Select(t => SearchOneLoreTargetAsync(t));
+            var searches = targets.Select(t => SearchOneLoreTargetAsync(t, correlationId));
             var results = await Task.WhenAll(searches);
 
             return results.SelectMany(r => r);
         }
 
-        private async Task<IEnumerable<LoreEntry>> SearchOneLoreTargetAsync(DirectiveTarget target)
+        private async Task<IEnumerable<LoreEntry>> SearchOneLoreTargetAsync(DirectiveTarget target, string? correlationId)
         {
             try
             {
@@ -194,9 +214,8 @@ namespace StationAI.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex,
-                    "Lore search failed for directive target '{Target}' (type: {Type}); skipping.",
-                    target.Target, target.Type);
+                _log.Warn("Lore search failed for directive target '{Target}' (type: {Type}); skipping.", target.Target, target.Type);
+                _log.Error(ex, "Lore search exception for target {Target}", target.Target);
                 return [];
             }
         }

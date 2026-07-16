@@ -1,7 +1,8 @@
-﻿using Azure.Storage.Queues;
+using Azure.Storage.Queues;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Station.Logging;
 using StationShipManifestLogger.Common.Data;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -39,15 +40,28 @@ namespace StationShipManifestLogger.Features.Docking
         public List<string> CargoItems { get; set; } = [];
 
         public List<string> Passengers { get; set; } = [];
+
+        public string CorrelationId { get; set; } = string.Empty;
     }
 
-    public class SubmitManifestReportHandler(ManifestLoggerDbContext context, ShipManifestQueuePublisher queuePublisher) : IRequestHandler<ManifestReportCommand, int>
+    public class SubmitManifestReportHandler(
+        ManifestLoggerDbContext context,
+        ShipManifestQueuePublisher queuePublisher,
+        IStationLogger<SubmitManifestReportHandler> log) : IRequestHandler<ManifestReportCommand, int>
     {
         private readonly ManifestLoggerDbContext _context = context;
         private readonly ShipManifestQueuePublisher _queuePublisher = queuePublisher;
+        private readonly IStationLogger<SubmitManifestReportHandler> _log = log;
 
         public async Task<int> Handle(ManifestReportCommand request, CancellationToken cancellationToken)
         {
+            request.CorrelationId = Guid.NewGuid().ToString("N")[..8];
+
+            _log.Info("Manifest received — {ShipName} ({Callsign}), Captain: {CaptainName}, Cargo: {CargoCount} item(s), Passengers: {PassengerCount}",
+                request.ShipName, request.Callsign, request.CaptainName,
+                request.CargoItems.Count, request.Passengers.Count)
+                .Public(request.CorrelationId);
+
             var logEntry = new ManifestAuditLog
             {
                 Callsign = request.Callsign,
@@ -60,7 +74,14 @@ namespace StationShipManifestLogger.Features.Docking
             _context.ManifestAuditLogs.Add(logEntry);
             await _context.SaveChangesAsync(cancellationToken);
 
+            _log.Info("Manifest logged to audit — {Callsign}, Audit ID: {AuditId}",
+                request.Callsign, logEntry.Id)
+                .Public(request.CorrelationId);
+
             await _queuePublisher.PublishAsync(request);
+
+            _log.Info("Manifest dispatched to assessment queue — {Callsign}", request.Callsign)
+                .Public(request.CorrelationId);
 
             return logEntry.Id;
         }

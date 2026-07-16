@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
+using Station.Logging;
 using StationAI.Adapters.Outbound;
 using StationAI.Core.Interfaces;
 using StationAI.Core.Services;
@@ -60,7 +61,6 @@ builder.Services.AddSingleton<ILoreRepository>(sp =>
     var qdrantApiKey = builder.Configuration["Qdrant:ApiKey"]
         ?? throw new InvalidOperationException("Qdrant:ApiKey configuration is required");
     var embeddingService = sp.GetRequiredService<IEmbeddingService>();
-
     var collectionName = builder.Configuration["Qdrant:Collection"] ?? "station-lore";
 
     return new QdrantLoreAdapter(qdrantUrl, qdrantApiKey, collectionName, embeddingService);
@@ -70,6 +70,7 @@ var blobStorageConnection = builder.Configuration.GetConnectionString("BlobStora
     ?? throw new InvalidOperationException("BlobStorageConnection connection string is not set. Fix your configuration.");
 
 builder.Services.AddSingleton(new BlobServiceClient(blobStorageConnection));
+builder.Services.AddStationLogging("station-ai", "API");
 builder.Services.AddScoped<ILoreService, LoreService>();
 builder.Services.AddScoped<IStationDirectiveRepository, RulesBlobStorageAdapter>();
 builder.Services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
@@ -80,6 +81,8 @@ builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+await app.Services.WarmPublicLogStreamAsync();
 
 app.MapDefaultEndpoints();
 
