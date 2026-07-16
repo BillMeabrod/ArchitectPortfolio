@@ -24,14 +24,12 @@ namespace StationAI.Core.Services
             var moderationService = scope.ServiceProvider.GetRequiredService<IModerationService>();
             var stationDirectiveRepository = scope.ServiceProvider.GetRequiredService<IStationDirectiveRepository>();
 
-            _log.Info("Station directive received — running content moderation")
-                .Public();
+            _log.InfoPublic("Station directive received — running content moderation", null);
 
             bool moderationRejected = await moderationService.IsRejectedByModerationAsync(directive);
             if (moderationRejected)
             {
-                _log.Warn("Directive failed moderation — reverting to fallback")
-                    .Public();
+                _log.WarnPublic("Directive failed moderation — reverting to fallback", null);
 
                 try
                 {
@@ -54,8 +52,7 @@ namespace StationAI.Core.Services
                 return;
             }
 
-            _log.Info("Directive passed moderation — parsing targets")
-                .Public();
+            _log.InfoPublic("Directive passed moderation — parsing targets", null);
 
             await ParseAndStoreTargetsAsync(directive, parsingService, targetRepository);
         }
@@ -70,10 +67,11 @@ namespace StationAI.Core.Services
                 var targets = await parsingService.Parse(directive);
                 await targetRepository.SaveTargetsAsync(targets);
 
-                _log.Info("Directive targets extracted — {Count} target(s): {Targets}",
+                _log.InfoPublic(
+                    "Directive targets extracted — {Count} target(s): {Targets}",
+                    null,
                     targets.Count,
-                    string.Join(", ", targets.Select(t => $"{t.Target} ({t.Type})")))
-                    .Public();
+                    string.Join(", ", targets.Select(t => $"{t.Target} ({t.Type})")));
             }
             catch (Exception ex)
             {

@@ -33,8 +33,7 @@ public class LoreService : ILoreService
         var saved = await _loreStoreRepository.SaveAsync(entry);
         await _loreRepository.UpsertAsync(saved);
 
-        _log.Info("Lore entry created — {Title} [{Category}]", saved.Title, saved.Category)
-            .Public();
+        _log.InfoPublic("Lore entry created — {Title} [{Category}]", null, saved.Title, saved.Category);
 
         return saved;
     }
@@ -58,8 +57,7 @@ public class LoreService : ILoreService
         var saved = await _loreStoreRepository.SaveAsync(existing);
         await _loreRepository.UpsertAsync(saved);
 
-        _log.Info("Lore entry updated — {Title} [{Category}]", saved.Title, saved.Category)
-            .Public();
+        _log.InfoPublic("Lore entry updated — {Title} [{Category}]", null, saved.Title, saved.Category);
 
         return saved;
     }
@@ -92,8 +90,7 @@ public class LoreService : ILoreService
             throw;
         }
 
-        _log.Info("Lore entry deleted — {Title}", existing.Title)
-            .Public();
+        _log.InfoPublic("Lore entry deleted — {Title}", null, existing.Title);
 
         return true;
     }
@@ -126,9 +123,8 @@ public class LoreService : ILoreService
             await _loreRepository.UpsertBulkAsync(saved);
             result.Succeeded = saved.Count;
 
-            _log.Info("Bulk lore import complete — {Succeeded} saved, {Failed} failed",
-                result.Succeeded, result.Failures.Count)
-                .Public();
+            _log.InfoPublic("Bulk lore import complete — {Succeeded} saved, {Failed} failed",
+                null, result.Succeeded, result.Failures.Count);
         }
 
         return result;

@@ -30,20 +30,17 @@ namespace StationAI.Core.Services
 
         public async Task<RiskAssessment> AssessRisk(ShipManifest manifest)
         {
-            _log.Info("Assessment started — {Callsign}", manifest.Callsign)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic("Assessment started — {Callsign}", manifest.CorrelationId, manifest.Callsign);
 
             string stationDirective = await _rulesRepository.GetRules() ?? AriaIdentity.NoStationDirectiveFallback;
             string manifestJson = JsonSerializer.Serialize(manifest);
 
-            _log.Info("Loading lore context — {Callsign}", manifest.Callsign)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic("Loading lore context — {Callsign}", manifest.CorrelationId, manifest.Callsign);
 
             string loreIntel = await BuildLoreContextAsync(manifest);
             string prompt = BuildPrompt(stationDirective, manifestJson, loreIntel);
 
-            _log.Info("Sending prompt to ARIA — {Callsign}", manifest.Callsign)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic("Sending prompt to ARIA — {Callsign}", manifest.CorrelationId, manifest.Callsign);
 
             // Full prompt logged to Azure Monitor only — not surfaced publicly
             _log.Info("Full prompt for {Callsign}:\n{Prompt}", manifest.Callsign, prompt);
@@ -53,14 +50,14 @@ namespace StationAI.Core.Services
             if (assessment is null)
                 throw new InvalidOperationException("ARIA returned an out-of-range or invalid risk assessment twice in a row.");
 
-            _log.Info("Assessment complete — {ShipName} ({Callsign}): Bio={Bio} Chem={Chem} Sec={Sec}",
+            _log.InfoPublic(
+                "Assessment complete — {ShipName} ({Callsign}): Bio={Bio} Chem={Chem} Sec={Sec}",
+                manifest.CorrelationId,
                 manifest.ShipName, manifest.Callsign,
-                assessment.BiohazardLevel, assessment.ChemicalHazardLevel, assessment.SecurityHazardLevel)
-                .Public(manifest.CorrelationId);
+                assessment.BiohazardLevel, assessment.ChemicalHazardLevel, assessment.SecurityHazardLevel);
 
             if (assessment.InappropriateContent)
-                _log.Warn("Inappropriate content flagged — {Callsign}", manifest.Callsign)
-                    .Public(manifest.CorrelationId);
+                _log.WarnPublic("Inappropriate content flagged — {Callsign}", manifest.CorrelationId, manifest.Callsign);
 
             return assessment;
         }
@@ -148,8 +145,7 @@ namespace StationAI.Core.Services
                     combined.Add(entry);
             }
 
-            _log.Info("Lore context built — {Count} entries retrieved", combined.Count)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic("Lore context built — {Count} entries retrieved", manifest.CorrelationId, combined.Count);
 
             if (combined.Count == 0)
                 return string.Empty;

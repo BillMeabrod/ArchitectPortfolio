@@ -34,13 +34,17 @@ public class ShipManifestFunction
                 return;
             }
 
-            _log.Info("Manifest received for assessment — {ShipName} ({Callsign})", manifest.ShipName, manifest.Callsign)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic(
+                "Manifest received for assessment — {ShipName} ({Callsign})",
+                manifest.CorrelationId,
+                manifest.ShipName, manifest.Callsign);
 
             var assessment = await _riskAssessmentService.AssessRisk(manifest);
 
-            _log.Info("Assessment dispatched to triage queue — {Callsign}", manifest.Callsign)
-                .Public(manifest.CorrelationId);
+            _log.InfoPublic(
+                "Assessment dispatched to triage queue — {Callsign}",
+                manifest.CorrelationId,
+                manifest.Callsign);
 
             await _queuePublisher.PublishAsync(assessment, manifest);
         }

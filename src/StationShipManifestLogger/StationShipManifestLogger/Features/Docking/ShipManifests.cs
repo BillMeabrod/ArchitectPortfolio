@@ -57,10 +57,11 @@ namespace StationShipManifestLogger.Features.Docking
         {
             request.CorrelationId = Guid.NewGuid().ToString("N")[..8];
 
-            _log.Info("Manifest received — {ShipName} ({Callsign}), Captain: {CaptainName}, Cargo: {CargoCount} item(s), Passengers: {PassengerCount}",
+            _log.InfoPublic(
+                "Manifest received — {ShipName} ({Callsign}), Captain: {CaptainName}, Cargo: {CargoCount} item(s), Passengers: {PassengerCount}",
+                request.CorrelationId,
                 request.ShipName, request.Callsign, request.CaptainName,
-                request.CargoItems.Count, request.Passengers.Count)
-                .Public(request.CorrelationId);
+                request.CargoItems.Count, request.Passengers.Count);
 
             var logEntry = new ManifestAuditLog
             {
@@ -74,14 +75,17 @@ namespace StationShipManifestLogger.Features.Docking
             _context.ManifestAuditLogs.Add(logEntry);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _log.Info("Manifest logged to audit — {Callsign}, Audit ID: {AuditId}",
-                request.Callsign, logEntry.Id)
-                .Public(request.CorrelationId);
+            _log.InfoPublic(
+                "Manifest logged to audit — {Callsign}, Audit ID: {AuditId}",
+                request.CorrelationId,
+                request.Callsign, logEntry.Id);
 
             await _queuePublisher.PublishAsync(request);
 
-            _log.Info("Manifest dispatched to assessment queue — {Callsign}", request.Callsign)
-                .Public(request.CorrelationId);
+            _log.InfoPublic(
+                "Manifest dispatched to assessment queue — {Callsign}",
+                request.CorrelationId,
+                request.Callsign);
 
             return logEntry.Id;
         }
