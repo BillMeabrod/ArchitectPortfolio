@@ -18,7 +18,7 @@
     <ProjectReference Include="..\..\ArchitectPortfolio.ServiceDefaults\ArchitectPortfolio.ServiceDefaults.csproj" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Qdrant.Client" Version="1.18.1" />
-    <PackageReference Include="Station.Logging" Version="2.0.0" />
+    <PackageReference Include="Station.Logging" Version="2.1.0" />
   </ItemGroup>
 
 </Project>
