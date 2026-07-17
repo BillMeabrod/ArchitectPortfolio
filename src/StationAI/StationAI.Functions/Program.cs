@@ -16,6 +16,8 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("BlobStorageConnection environment variable is not set. Fix your configuration.");
         var azureWebJobsStorage = Environment.GetEnvironmentVariable("AzureWebJobsStorage")
             ?? throw new InvalidOperationException("AzureWebJobsStorage environment variable is not set. Fix your configuration.");
+        var stationAiApiUrl = Environment.GetEnvironmentVariable("StationAI__ApiUrl")
+            ?? throw new InvalidOperationException("StationAI__ApiUrl environment variable is not set. Fix your configuration.");
 
         var qdrantUrl = Environment.GetEnvironmentVariable("Qdrant__Url")
             ?? throw new InvalidOperationException("Qdrant:Url is not set. Fix your configuration.");
@@ -23,10 +25,8 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("Qdrant:ApiKey is not set. Fix your configuration.");
         var qdrantCollection = Environment.GetEnvironmentVariable("Qdrant__Collection") ?? "station-lore";
 
-        var blobServiceClient = new BlobServiceClient(blobStorageConnection);
-        services.AddSingleton(blobServiceClient);
-
-        services.AddStationLogging("station-ai", "ARIA");
+        services.AddSingleton(new BlobServiceClient(blobStorageConnection));
+        services.AddStationLoggingForwarder(stationAiApiUrl, "ARIA");
 
         services.AddScoped<RiskAssessmentService>();
         services.AddScoped<ILargeLanguageModelService, GeminiAdapter>();
@@ -40,7 +40,5 @@ var host = new HostBuilder()
         services.AddScoped<RiskAssessmentQueuePublisher>();
     })
     .Build();
-
-await host.Services.WarmPublicLogStreamAsync();
 
 await host.RunAsync();

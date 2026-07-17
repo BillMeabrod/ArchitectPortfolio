@@ -41,6 +41,13 @@ public class LogStreamController : ControllerBase
         }
     }
 
+    [HttpPost("ingest")]
+    public IActionResult Ingest([FromBody] LogEntry entry)
+    {
+        _stream.Publish(entry);
+        return Ok();
+    }
+
     private async Task WriteEntry(LogEntry entry, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(entry);
